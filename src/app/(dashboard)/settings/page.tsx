@@ -1,5 +1,6 @@
 "use client";
 
+import React, { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
@@ -10,7 +11,8 @@ import { Switch } from "@/components/ui/switch";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { user } from '@/lib/mock-data';
+import type { TeamUser } from "@/lib/types";
+import { Skeleton } from "@/components/ui/skeleton";
 
 function GeneralSettings() {
     return (
@@ -135,11 +137,28 @@ function MlBaselines() {
 }
 
 function UserAccess() {
-    const users = [
-        { id: 1, name: "Jane Doe", email: "jane.doe@example.com", role: "Admin", avatar: user.avatar },
-        { id: 2, name: "John Smith", email: "john.smith@example.com", role: "Analyst", avatar: "https://picsum.photos/seed/user-2/40/40" },
-        { id: 3, name: "Emily Jones", email: "emily.jones@example.com", role: "Analyst", avatar: "https://picsum.photos/seed/user-3/40/40" },
-    ]
+    const [users, setUsers] = useState<TeamUser[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
+
+    useEffect(() => {
+        const fetchData = async () => {
+            setIsLoading(true);
+            // TODO: Replace with your actual API endpoint to fetch users
+            // try {
+            //     const response = await fetch('/api/users');
+            //     const result = await response.json();
+            //     setUsers(result);
+            // } catch (error) {
+            //     console.error("Failed to fetch users:", error);
+            //     setUsers([]);
+            // } finally {
+            //     setIsLoading(false);
+            // }
+            setIsLoading(false); // Remove this when fetch is implemented
+        };
+        fetchData();
+    }, []);
+
     return (
         <Card>
             <CardHeader>
@@ -156,7 +175,12 @@ function UserAccess() {
                         </TableRow>
                     </TableHeader>
                     <TableBody>
-                        {users.map(u => (
+                        {isLoading && Array.from({length: 3}).map((_, i) => (
+                            <TableRow key={i}>
+                                <TableCell colSpan={3}><Skeleton className="h-10 w-full" /></TableCell>
+                            </TableRow>
+                        ))}
+                        {!isLoading && users.map(u => (
                             <TableRow key={u.id}>
                                 <TableCell>
                                     <div className="flex items-center gap-3">
@@ -177,6 +201,11 @@ function UserAccess() {
                                 </TableCell>
                             </TableRow>
                         ))}
+                        {!isLoading && users.length === 0 && (
+                            <TableRow>
+                                <TableCell colSpan={3} className="text-center text-muted-foreground">No users found.</TableCell>
+                            </TableRow>
+                        )}
                     </TableBody>
                 </Table>
             </CardContent>

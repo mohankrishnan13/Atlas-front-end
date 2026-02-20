@@ -1,27 +1,26 @@
 "use client";
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from '@/components/ui/input';
 import { Ban, Search, ShieldX, CheckCircle, LoaderCircle } from "lucide-react";
-import { incidentsData } from "@/lib/mock-data";
 import { cn, getSeverityClassNames } from "@/lib/utils";
-import type { Severity } from "@/lib/types";
+import type { Severity, Incident } from "@/lib/types";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet';
 import { aiInvestigatorSummary, AiInvestigatorSummaryOutput, AiInvestigatorSummaryInput } from '@/ai/flows/ai-investigator-summary';
 import { useToast } from '@/hooks/use-toast';
+import { Skeleton } from '@/components/ui/skeleton';
 
-type Incident = typeof incidentsData[0];
 
 function IncidentDetailSheet({ incident, open, onOpenChange }: { incident: Incident | null, open: boolean, onOpenChange: (open: boolean) => void }) {
     const { toast } = useToast();
     const [summary, setSummary] = useState<AiInvestigatorSummaryOutput | null>(null);
     const [isLoading, setIsLoading] = useState(false);
 
-    React.useEffect(() => {
+    useEffect(() => {
         if (incident && open) {
             setIsLoading(true);
             setSummary(null);
@@ -46,6 +45,7 @@ function IncidentDetailSheet({ incident, open, onOpenChange }: { incident: Incid
     }, [incident, open]);
 
     const handleRemediation = (action: string) => {
+        // TODO: This should trigger a backend API call
         toast({
             title: `Action: ${action}`,
             description: `Action taken for incident ${incident?.id}`,
@@ -123,8 +123,29 @@ function IncidentDetailSheet({ incident, open, onOpenChange }: { incident: Incid
 export default function IncidentsPage() {
     const [search, setSearch] = useState("");
     const [selectedIncident, setSelectedIncident] = useState<Incident | null>(null);
+    const [incidents, setIncidents] = useState<Incident[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
 
-    const filteredIncidents = incidentsData.filter(inc =>
+    useEffect(() => {
+        const fetchData = async () => {
+            setIsLoading(true);
+            // TODO: Replace with your actual API endpoint to fetch incidents
+            // try {
+            //     const response = await fetch('/api/incidents');
+            //     const result = await response.json();
+            //     setIncidents(result);
+            // } catch (error) {
+            //     console.error("Failed to fetch incidents:", error);
+            //     setIncidents([]);
+            // } finally {
+            //     setIsLoading(false);
+            // }
+            setIsLoading(false); // Remove this when fetch is implemented
+        };
+        fetchData();
+    }, []);
+
+    const filteredIncidents = incidents.filter(inc =>
         Object.values(inc).some(val =>
             String(val).toLowerCase().includes(search.toLowerCase())
         )
@@ -155,7 +176,12 @@ export default function IncidentsPage() {
                             </TableRow>
                         </TableHeader>
                         <TableBody>
-                            {filteredIncidents.map((incident) => {
+                            {isLoading && Array.from({length: 5}).map((_, i) => (
+                                <TableRow key={i}>
+                                    <TableCell colSpan={5}><Skeleton className="h-8 w-full" /></TableCell>
+                                </TableRow>
+                            ))}
+                            {!isLoading && filteredIncidents.map((incident) => {
                                 const severityClasses = getSeverityClassNames(incident.severity as Severity);
                                 return (
                                 <TableRow key={incident.id} onClick={() => setSelectedIncident(incident)} className="cursor-pointer">
@@ -179,6 +205,11 @@ export default function IncidentsPage() {
                                     <TableCell>{incident.timestamp}</TableCell>
                                 </TableRow>
                             )})}
+                            {!isLoading && filteredIncidents.length === 0 && (
+                                <TableRow>
+                                    <TableCell colSpan={5} className="text-center text-muted-foreground">No incidents found.</TableCell>
+                                </TableRow>
+                            )}
                         </TableBody>
                     </Table>
                 </CardContent>

@@ -1,10 +1,12 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Hourglass, Users, PackageOpen } from "lucide-react";
-import { dbMonitoringData } from "@/lib/mock-data";
+import { Skeleton } from "@/components/ui/skeleton";
+import type { DbMonitoringData } from "@/lib/types";
 import {
   ChartContainer,
   ChartTooltip,
@@ -19,7 +21,7 @@ const chartConfig = {
   DELETE: { label: "DELETE", color: "hsl(var(--chart-5))" },
 };
 
-function StatCard({ title, value, unit, icon: Icon }: { title: string, value: string | number, unit?: string, icon: React.ElementType }) {
+function StatCard({ title, value, unit, icon: Icon, isLoading }: { title: string, value?: string | number, unit?: string, icon: React.ElementType, isLoading: boolean }) {
     return (
         <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -27,23 +29,46 @@ function StatCard({ title, value, unit, icon: Icon }: { title: string, value: st
                 <Icon className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
+                {isLoading ? <Skeleton className="h-8 w-24" /> : 
                 <div className="text-2xl font-bold">
-                    {typeof value === 'number' ? value.toLocaleString() : value}
+                    {value}
                     {unit && <span className="text-xs text-muted-foreground ml-1">{unit}</span>}
-                </div>
+                </div>}
             </CardContent>
         </Card>
     )
 }
 
 export default function DatabaseMonitoringPage() {
+    const [data, setData] = useState<DbMonitoringData | null>(null);
+    const [isLoading, setIsLoading] = useState(true);
+
+     useEffect(() => {
+        const fetchData = async () => {
+            setIsLoading(true);
+            // TODO: Replace with your actual API endpoint
+            // try {
+            //     const response = await fetch('/api/db-monitoring');
+            //     const result = await response.json();
+            //     setData(result);
+            // } catch (error) {
+            //     console.error("Failed to fetch database monitoring data:", error);
+            //     setData(null);
+            // } finally {
+            //     setIsLoading(false);
+            // }
+            setIsLoading(false); // Remove this when fetch is implemented
+        };
+        fetchData();
+    }, []);
+
     return (
         <div className="space-y-8">
             <h1 className="text-3xl font-bold">Database Monitoring</h1>
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                <StatCard title="Active Connections" value={dbMonitoringData.activeConnections} icon={Users} />
-                <StatCard title="Avg Query Latency" value={dbMonitoringData.avgQueryLatency} unit="ms" icon={Hourglass} />
-                <StatCard title="Data Export Volume (24h)" value={dbMonitoringData.dataExportVolume} unit="TB" icon={PackageOpen} />
+                <StatCard title="Active Connections" value={data?.activeConnections} icon={Users} isLoading={isLoading} />
+                <StatCard title="Avg Query Latency" value={data?.avgQueryLatency} unit="ms" icon={Hourglass} isLoading={isLoading} />
+                <StatCard title="Data Export Volume (24h)" value={data?.dataExportVolume} unit="TB" icon={PackageOpen} isLoading={isLoading} />
             </div>
 
             <Card>
@@ -51,9 +76,10 @@ export default function DatabaseMonitoringPage() {
                     <CardTitle>Database Operations</CardTitle>
                 </CardHeader>
                 <CardContent className="h-[400px]">
+                    {isLoading ? <Skeleton className="h-full w-full" /> :
                      <ChartContainer config={chartConfig} className="h-full w-full">
                         <ResponsiveContainer width="100%" height="100%">
-                            <AreaChart data={dbMonitoringData.operationsChart} margin={{ top: 5, right: 20, left: -10, bottom: 5 }}>
+                            <AreaChart data={data?.operationsChart} margin={{ top: 5, right: 20, left: -10, bottom: 5 }}>
                                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--border) / 0.5)" />
                                 <XAxis dataKey="name" tick={{ fill: 'hsl(var(--muted-foreground))' }} tickLine={false} axisLine={false} fontSize={12} />
                                 <YAxis tick={{ fill: 'hsl(var(--muted-foreground))' }} tickLine={false} axisLine={false} fontSize={12} tickFormatter={(value) => `${value / 1000}k`} />
@@ -65,7 +91,7 @@ export default function DatabaseMonitoringPage() {
                                 <Area type="monotone" dataKey="DELETE" stackId="1" stroke="hsl(var(--chart-5))" fill="hsl(var(--chart-5) / 0.1)" />
                             </AreaChart>
                         </ResponsiveContainer>
-                    </ChartContainer>
+                    </ChartContainer>}
                 </CardContent>
             </Card>
 
@@ -85,7 +111,12 @@ export default function DatabaseMonitoringPage() {
                             </TableRow>
                         </TableHeader>
                         <TableBody>
-                            {dbMonitoringData.suspiciousActivity.map((activity) => (
+                            {isLoading && Array.from({length: 4}).map((_, i) => (
+                                <TableRow key={i}>
+                                    <TableCell colSpan={5}><Skeleton className="h-6 w-full" /></TableCell>
+                                </TableRow>
+                            ))}
+                            {!isLoading && data?.suspiciousActivity.map((activity) => (
                                 <TableRow key={activity.id}>
                                     <TableCell><Badge variant="outline">{activity.app}</Badge></TableCell>
                                     <TableCell className="font-mono">{activity.user}</TableCell>
@@ -94,6 +125,11 @@ export default function DatabaseMonitoringPage() {
                                     <TableCell className="text-yellow-400">{activity.reason}</TableCell>
                                 </TableRow>
                             ))}
+                            {!isLoading && (!data || data.suspiciousActivity.length === 0) && (
+                                <TableRow>
+                                    <TableCell colSpan={5} className="text-center text-muted-foreground">No suspicious activity detected.</TableCell>
+                                </TableRow>
+                            )}
                         </TableBody>
                     </Table>
                 </CardContent>

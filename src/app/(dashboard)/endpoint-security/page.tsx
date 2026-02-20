@@ -1,14 +1,13 @@
 "use client";
 
-import Image from 'next/image';
+import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Laptop, WifiOff, ShieldAlert, ShieldX } from "lucide-react";
-import { endpointSecurityData } from "@/lib/mock-data";
 import { cn, getSeverityClassNames } from "@/lib/utils";
-import type { Severity } from "@/lib/types";
+import type { Severity, EndpointSecurityData, OsDistribution, AlertTypeDistribution } from "@/lib/types";
 import {
   ChartContainer,
   ChartTooltip,
@@ -17,8 +16,9 @@ import {
 import { Pie, PieChart, Cell, ResponsiveContainer, Legend } from "recharts"
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useToast } from '@/hooks/use-toast';
+import { Skeleton } from '@/components/ui/skeleton';
 
-function StatCard({ title, value, icon: Icon }: { title: string, value: string | number, icon: React.ElementType }) {
+function StatCard({ title, value, icon: Icon, isLoading }: { title: string, value?: string | number, icon: React.ElementType, isLoading: boolean }) {
     return (
         <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -26,24 +26,25 @@ function StatCard({ title, value, icon: Icon }: { title: string, value: string |
                 <Icon className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-                <div className="text-2xl font-bold">{typeof value === 'number' ? value.toLocaleString() : value}</div>
+                 {isLoading ? <Skeleton className="h-8 w-24" /> : <div className="text-2xl font-bold">{value}</div>}
             </CardContent>
         </Card>
     )
 }
 
-function OsDistributionChart() {
+function OsDistributionChart({ data, isLoading }: { data?: OsDistribution[], isLoading: boolean }) {
     return (
         <Card>
             <CardHeader>
                 <CardTitle>OS Distribution</CardTitle>
             </CardHeader>
             <CardContent className="h-[300px]">
+                {isLoading ? <Skeleton className="h-full w-full" /> :
                 <ChartContainer config={{}} className="h-full w-full">
                     <ResponsiveContainer width="100%" height="100%">
                         <PieChart>
-                            <Pie data={endpointSecurityData.osDistribution} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={80}>
-                                {endpointSecurityData.osDistribution.map((entry, index) => (
+                            <Pie data={data} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={80}>
+                                {data?.map((entry, index) => (
                                     <Cell key={`cell-${index}`} fill={entry.fill} />
                                 ))}
                             </Pie>
@@ -51,24 +52,25 @@ function OsDistributionChart() {
                             <Legend />
                         </PieChart>
                     </ResponsiveContainer>
-                </ChartContainer>
+                </ChartContainer>}
             </CardContent>
         </Card>
     )
 }
 
-function AlertTypesChart() {
+function AlertTypesChart({ data, isLoading }: { data?: AlertTypeDistribution[], isLoading: boolean }) {
     return (
         <Card>
             <CardHeader>
                 <CardTitle>Alert Types</CardTitle>
             </CardHeader>
             <CardContent className="h-[300px]">
+                {isLoading ? <Skeleton className="h-full w-full" /> :
                 <ChartContainer config={{}} className="h-full w-full">
                     <ResponsiveContainer width="100%" height="100%">
                         <PieChart>
-                            <Pie data={endpointSecurityData.alertTypes} dataKey="value" nameKey="name" cx="50%" cy="50%" innerRadius={60} outerRadius={80}>
-                                 {endpointSecurityData.alertTypes.map((entry, index) => (
+                            <Pie data={data} dataKey="value" nameKey="name" cx="50%" cy="50%" innerRadius={60} outerRadius={80}>
+                                 {data?.map((entry, index) => (
                                     <Cell key={`cell-${index}`} fill={entry.fill} />
                                 ))}
                             </Pie>
@@ -76,7 +78,7 @@ function AlertTypesChart() {
                             <Legend />
                         </PieChart>
                     </ResponsiveContainer>
-                </ChartContainer>
+                </ChartContainer>}
             </CardContent>
         </Card>
     )
@@ -84,8 +86,30 @@ function AlertTypesChart() {
 
 export default function EndpointSecurityPage() {
     const { toast } = useToast();
+    const [data, setData] = useState<EndpointSecurityData | null>(null);
+    const [isLoading, setIsLoading] = useState(true);
+
+    useEffect(() => {
+        const fetchData = async () => {
+            setIsLoading(true);
+            // TODO: Replace with your actual API endpoint
+            // try {
+            //     const response = await fetch('/api/endpoint-security');
+            //     const result = await response.json();
+            //     setData(result);
+            // } catch (error) {
+            //     console.error("Failed to fetch endpoint security data:", error);
+            //     setData(null);
+            // } finally {
+            //     setIsLoading(false);
+            // }
+            setIsLoading(false); // Remove this when fetch is implemented
+        };
+        fetchData();
+    }, []);
 
     const handleQuarantine = (workstationId: string) => {
+        // TODO: This should trigger a backend API call to quarantine the device
         toast({
             title: "Quarantine Action",
             description: `Device ${workstationId} has been sent to quarantine.`,
@@ -96,14 +120,14 @@ export default function EndpointSecurityPage() {
         <div className="space-y-8">
             <h1 className="text-3xl font-bold">Endpoint Security</h1>
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                <StatCard title="Monitored Laptops" value={endpointSecurityData.monitoredLaptops} icon={Laptop} />
-                <StatCard title="Offline Devices" value={endpointSecurityData.offlineDevices} icon={WifiOff} />
-                <StatCard title="Malware Alerts" value={endpointSecurityData.malwareAlerts} icon={ShieldAlert} />
+                <StatCard title="Monitored Laptops" value={data?.monitoredLaptops} icon={Laptop} isLoading={isLoading} />
+                <StatCard title="Offline Devices" value={data?.offlineDevices} icon={WifiOff} isLoading={isLoading} />
+                <StatCard title="Malware Alerts" value={data?.malwareAlerts} icon={ShieldAlert} isLoading={isLoading} />
             </div>
 
             <div className="grid gap-4 md:grid-cols-2">
-                <OsDistributionChart />
-                <AlertTypesChart />
+                <OsDistributionChart data={data?.osDistribution} isLoading={isLoading} />
+                <AlertTypesChart data={data?.alertTypes} isLoading={isLoading} />
             </div>
 
             <Card>
@@ -122,7 +146,12 @@ export default function EndpointSecurityPage() {
                             </TableRow>
                         </TableHeader>
                         <TableBody>
-                            {endpointSecurityData.wazuhEvents.map((event) => {
+                            {isLoading && Array.from({length: 4}).map((_, i) => (
+                                <TableRow key={i}>
+                                    <TableCell colSpan={5}><Skeleton className="h-8 w-full" /></TableCell>
+                                </TableRow>
+                            ))}
+                            {!isLoading && data?.wazuhEvents.map((event) => {
                                 const severityClasses = getSeverityClassNames(event.severity as Severity);
                                 return (
                                 <TableRow key={event.id}>
@@ -154,6 +183,11 @@ export default function EndpointSecurityPage() {
                                     </TableCell>
                                 </TableRow>
                             )})}
+                             {!isLoading && (!data || data.wazuhEvents.length === 0) && (
+                                <TableRow>
+                                    <TableCell colSpan={5} className="text-center text-muted-foreground">No Wazuh events to display.</TableCell>
+                                </TableRow>
+                            )}
                         </TableBody>
                     </Table>
                 </CardContent>

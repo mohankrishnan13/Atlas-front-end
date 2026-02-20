@@ -1,9 +1,8 @@
 "use client";
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
-import Image from 'next/image';
-import { Bell, LogOut, Settings, ShieldCheck, User } from 'lucide-react';
+import { Bell, LogOut, Settings, ShieldCheck, User, LoaderCircle } from 'lucide-react';
 import {
   Select,
   SelectContent,
@@ -22,11 +21,10 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { applications, user, recentAlerts } from '@/lib/mock-data';
 import { cn, getSeverityClassNames } from '@/lib/utils';
 import { Badge } from '../ui/badge';
-import type { RecentAlert } from '@/lib/types';
-
+import type { RecentAlert, User as UserType, Application } from '@/lib/types';
+import { Skeleton } from '../ui/skeleton';
 
 function AlertItem({ alert }: { alert: RecentAlert }) {
   const severityClasses = getSeverityClassNames(alert.severity);
@@ -47,8 +45,36 @@ function AlertItem({ alert }: { alert: RecentAlert }) {
   );
 }
 
+type HeaderData = {
+  user: UserType;
+  applications: Application[];
+  recentAlerts: RecentAlert[];
+};
 
 export function DashboardHeader() {
+  const [data, setData] = useState<HeaderData | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    async function fetchData() {
+      setIsLoading(true);
+      // TODO: Replace with your actual API endpoint to fetch header data
+      // try {
+      //   const res = await fetch('/api/header-data');
+      //   const result = await res.json();
+      //   setData(result);
+      // } catch (error) {
+      //   console.error("Failed to fetch header data", error);
+      //   setData(null);
+      // }
+      
+      // For now, we'll stop loading but data will be null.
+      // In a real app, you would remove this and handle the fetch promise.
+      setIsLoading(false);
+    }
+    fetchData();
+  }, []);
+
   return (
     <header className="sticky top-0 z-30 hidden h-16 items-center gap-4 border-b bg-card px-4 md:flex md:px-6">
       <div className="flex items-center gap-2">
@@ -60,12 +86,12 @@ export function DashboardHeader() {
 
       <div className="flex-1 flex justify-center">
         <div className="w-full max-w-sm">
-           <Select defaultValue="all">
+           <Select defaultValue="all" disabled={isLoading || !data?.applications}>
             <SelectTrigger className="w-full">
               <SelectValue placeholder="Application Context" />
             </SelectTrigger>
             <SelectContent>
-              {applications.map((app) => (
+              {data?.applications?.map((app) => (
                 <SelectItem key={app.id} value={app.id}>
                   {app.name}
                 </SelectItem>
@@ -90,7 +116,7 @@ export function DashboardHeader() {
           <SheetTrigger asChild>
             <Button variant="ghost" size="icon" className="relative">
               <Bell className="h-5 w-5" />
-              {recentAlerts.length > 0 && (
+              {(data?.recentAlerts?.length ?? 0) > 0 && (
                 <span className="absolute top-0 right-0 flex h-2 w-2">
                   <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
                   <span className="relative inline-flex rounded-full h-2 w-2 bg-red-500"></span>
@@ -103,7 +129,9 @@ export function DashboardHeader() {
               <SheetTitle>Recent Alerts</SheetTitle>
             </SheetHeader>
             <div className="h-[calc(100vh-4.5rem)] overflow-y-auto">
-              {recentAlerts.map(alert => <AlertItem key={alert.id} alert={alert} />)}
+              {isLoading && <div className="p-4 text-center text-muted-foreground">Loading alerts...</div>}
+              {!isLoading && (!data || data.recentAlerts.length === 0) && <div className="p-4 text-center text-muted-foreground">No recent alerts.</div>}
+              {data?.recentAlerts.map(alert => <AlertItem key={alert.id} alert={alert} />)}
             </div>
           </SheetContent>
         </Sheet>
@@ -111,17 +139,21 @@ export function DashboardHeader() {
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" className="relative h-10 w-10 rounded-full">
-              <Avatar className="h-10 w-10">
-                <AvatarImage src={user.avatar} alt={user.name} data-ai-hint="woman face" />
-                <AvatarFallback>{user.name.charAt(0)}</AvatarFallback>
-              </Avatar>
+              {isLoading || !data?.user ? (
+                <Skeleton className="h-10 w-10 rounded-full" />
+              ) : (
+                <Avatar className="h-10 w-10">
+                  <AvatarImage src={data.user.avatar} alt={data.user.name} data-ai-hint="woman face" />
+                  <AvatarFallback>{data.user.name.charAt(0)}</AvatarFallback>
+                </Avatar>
+              )}
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent className="w-56" align="end" forceMount>
             <DropdownMenuLabel className="font-normal">
               <div className="flex flex-col space-y-1">
-                <p className="text-sm font-medium leading-none">{user.name}</p>
-                <p className="text-xs leading-none text-muted-foreground">{user.email}</p>
+                <p className="text-sm font-medium leading-none">{data?.user?.name || 'User'}</p>
+                <p className="text-xs leading-none text-muted-foreground">{data?.user?.email || 'email@example.com'}</p>
               </div>
             </DropdownMenuLabel>
             <DropdownMenuSeparator />

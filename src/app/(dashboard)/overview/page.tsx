@@ -4,10 +4,9 @@ import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Bug, LineChart, Server, Waves } from "lucide-react";
-import { overviewData } from "@/lib/mock-data";
+import { Bug, LineChart, Server, Waves, LoaderCircle } from "lucide-react";
 import { cn, getSeverityClassNames } from "@/lib/utils";
-import type { Severity } from "@/lib/types";
+import type { Severity, OverviewData, Microservice, SystemAnomaly, TimeSeriesData, AppAnomaly } from "@/lib/types";
 
 import { generateDailyThreatBriefing } from "@/ai/flows/ai-daily-threat-briefing-flow";
 
@@ -18,24 +17,26 @@ import {
 } from "@/components/ui/chart"
 import { Line, LineChart as RechartsLineChart, CartesianGrid, XAxis, YAxis, Tooltip as RechartsTooltip, ResponsiveContainer, BarChart, Bar } from "recharts"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { Skeleton } from "@/components/ui/skeleton";
 
 
-function AiDailyBriefing() {
+function AiDailyBriefing({ data }: { data: OverviewData | null }) {
     const [briefing, setBriefing] = useState("Generating briefing...");
 
     useEffect(() => {
+        if (!data) {
+            setBriefing("Briefing is unavailable while data is loading.");
+            return;
+        }
+
         const fetchBriefing = async () => {
-            if (!overviewData) {
-                setBriefing("Overview data is not available.");
-                return;
-            }
             const briefingInput = {
-                totalApiRequests: overviewData.apiRequests,
-                errorRatePercentage: overviewData.errorRate,
-                activeAlerts: overviewData.activeAlerts,
-                costRiskMeter: overviewData.costRisk,
-                failingApplications: overviewData.microservices.filter(s => s.status === 'Failing').map(s => s.name),
-                recentSystemAnomalies: overviewData.systemAnomalies.map(a => `${a.service}: ${a.type}`),
+                totalApiRequests: data.apiRequests,
+                errorRatePercentage: data.errorRate,
+                activeAlerts: data.activeAlerts,
+                costRiskMeter: data.costRisk,
+                failingApplications: data.microservices.filter(s => s.status === 'Failing').map(s => s.name),
+                recentSystemAnomalies: data.systemAnomalies.map(a => `${a.service}: ${a.type}`),
             };
 
             try {
@@ -47,7 +48,7 @@ function AiDailyBriefing() {
             }
         };
         fetchBriefing();
-    }, []);
+    }, [data]);
     
     return (
         <Card className="col-span-1 md:col-span-2 xl:col-span-4 bg-card">
@@ -55,13 +56,15 @@ function AiDailyBriefing() {
                 <CardTitle>AI Daily Threat Briefing</CardTitle>
             </CardHeader>
             <CardContent>
-                <p className="text-muted-foreground">{briefing}</p>
+                <p className="text-muted-foreground">
+                    {data ? briefing : <Skeleton className="h-12 w-full" />}
+                </p>
             </CardContent>
         </Card>
     )
 }
 
-function StatCard({ title, value, icon: Icon }: { title: string, value: string | number, icon: React.ElementType }) {
+function StatCard({ title, value, icon: Icon, isLoading }: { title: string, value?: string | number, icon: React.ElementType, isLoading: boolean }) {
     return (
         <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -69,20 +72,21 @@ function StatCard({ title, value, icon: Icon }: { title: string, value: string |
                 <Icon className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-                <div className="text-2xl font-bold">{typeof value === 'number' ? value.toLocaleString() : value}</div>
+                {isLoading ? <Skeleton className="h-8 w-24" /> : <div className="text-2xl font-bold">{value}</div>}
             </CardContent>
         </Card>
     )
 }
 
-function MicroservicesTopology() {
+function MicroservicesTopology({ services, failingEndpoints, isLoading }: { services?: Microservice[], failingEndpoints?: Record<string, string>, isLoading: boolean }) {
     return (
         <Card className="col-span-1 md:col-span-2 xl:col-span-3">
             <CardHeader>
                 <CardTitle>Microservices Health Topology</CardTitle>
             </CardHeader>
             <CardContent className="h-[400px] relative">
-                {overviewData.microservices.map(service => (
+                {isLoading && <div className="flex items-center justify-center h-full"><LoaderCircle className="h-8 w-8 animate-spin" /></div>}
+                {!isLoading && services?.map(service => (
                     <TooltipProvider key={service.id}>
                         <Tooltip>
                             <TooltipTrigger asChild>
@@ -99,7 +103,7 @@ function MicroservicesTopology() {
                             </TooltipTrigger>
                              <TooltipContent>
                                 <p>Status: {service.status}</p>
-                                {service.status === 'Failing' && <p>Failing Endpoint: {overviewData.failingEndpoints[service.id as keyof typeof overviewData.failingEndpoints]}</p>}
+                                {service.status === 'Failing' && failingEndpoints && <p>Failing Endpoint: {failingEndpoints[service.id]}</p>}
                             </TooltipContent>
                         </Tooltip>
                     </TooltipProvider>
@@ -109,23 +113,21 @@ function MicroservicesTopology() {
     );
 }
 
-const chartConfig = {
-  requests: {
-    label: "API Requests",
-    color: "hsl(var(--primary))",
-  },
+const apiChartConfig = {
+  requests: { label: "API Requests", color: "hsl(var(--primary))" },
 }
 
-function ApiRequestsChart() {
+function ApiRequestsChart({ data, isLoading }: { data?: TimeSeriesData[], isLoading: boolean }) {
     return (
         <Card className="col-span-1 md:col-span-2 xl:col-span-2">
             <CardHeader>
                 <CardTitle>API Requests Over Time</CardTitle>
             </CardHeader>
             <CardContent className="h-[300px]">
-                <ChartContainer config={chartConfig} className="h-full w-full">
+                {isLoading ? <div className="h-full flex items-center justify-center"><Skeleton className="h-full w-full" /></div> :
+                <ChartContainer config={apiChartConfig} className="h-full w-full">
                     <ResponsiveContainer width="100%" height="100%">
-                        <RechartsLineChart data={overviewData.apiRequestsChart} margin={{ top: 5, right: 20, left: -10, bottom: 5 }}>
+                        <RechartsLineChart data={data} margin={{ top: 5, right: 20, left: -10, bottom: 5 }}>
                             <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--border) / 0.5)" />
                             <XAxis dataKey="name" tick={{ fill: 'hsl(var(--muted-foreground))' }} tickLine={false} axisLine={false} fontSize={12} />
                             <YAxis tick={{ fill: 'hsl(var(--muted-foreground))' }} tickLine={false} axisLine={false} fontSize={12} tickFormatter={(value) => `${value / 1000}k`} />
@@ -136,13 +138,13 @@ function ApiRequestsChart() {
                             <Line type="monotone" dataKey="requests" stroke="hsl(var(--primary))" strokeWidth={2} dot={false} />
                         </RechartsLineChart>
                     </ResponsiveContainer>
-                </ChartContainer>
+                </ChartContainer>}
             </CardContent>
         </Card>
     )
 }
 
-function SystemAnomaliesTable() {
+function SystemAnomaliesTable({ anomalies, isLoading }: { anomalies?: SystemAnomaly[], isLoading: boolean }) {
     return (
         <Card className="col-span-1 md:col-span-2 xl:col-span-3">
             <CardHeader>
@@ -159,7 +161,15 @@ function SystemAnomaliesTable() {
                         </TableRow>
                     </TableHeader>
                     <TableBody>
-                        {overviewData.systemAnomalies.map((anomaly) => {
+                        {isLoading && Array.from({length: 4}).map((_, i) => (
+                            <TableRow key={i}>
+                                <TableCell><Skeleton className="h-5 w-24" /></TableCell>
+                                <TableCell><Skeleton className="h-5 w-32" /></TableCell>
+                                <TableCell><Skeleton className="h-5 w-16" /></TableCell>
+                                <TableCell><Skeleton className="h-5 w-28" /></TableCell>
+                            </TableRow>
+                        ))}
+                        {!isLoading && anomalies?.map((anomaly) => {
                             const severityClasses = getSeverityClassNames(anomaly.severity as Severity);
                             return (
                                 <TableRow key={anomaly.id}>
@@ -174,6 +184,11 @@ function SystemAnomaliesTable() {
                                 </TableRow>
                             )
                         })}
+                        {!isLoading && (!anomalies || anomalies.length === 0) && (
+                            <TableRow>
+                                <TableCell colSpan={4} className="text-center text-muted-foreground">No recent anomalies.</TableCell>
+                            </TableRow>
+                        )}
                     </TableBody>
                 </Table>
             </CardContent>
@@ -182,22 +197,20 @@ function SystemAnomaliesTable() {
 }
 
 const appAnomaliesChartConfig = {
-  anomalies: {
-    label: "Anomalies",
-    color: "hsl(var(--chart-2))",
-  },
+  anomalies: { label: "Anomalies", color: "hsl(var(--chart-2))" },
 }
 
-function AppAnomaliesChart() {
+function AppAnomaliesChart({ data, isLoading }: { data?: AppAnomaly[], isLoading: boolean}) {
     return (
         <Card className="col-span-1 md:col-span-2 xl:col-span-2">
             <CardHeader>
                 <CardTitle>Anomalies by Application</CardTitle>
             </CardHeader>
             <CardContent className="h-[300px]">
+                {isLoading ? <div className="h-full flex items-center justify-center"><Skeleton className="h-full w-full" /></div> :
                 <ChartContainer config={appAnomaliesChartConfig} className="h-full w-full">
                     <ResponsiveContainer width="100%" height="100%">
-                        <BarChart data={overviewData.appAnomalies} margin={{ top: 5, right: 20, left: -10, bottom: 5 }}>
+                        <BarChart data={data} margin={{ top: 5, right: 20, left: -10, bottom: 5 }}>
                              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--border) / 0.5)" />
                             <XAxis dataKey="name" tick={{ fill: 'hsl(var(--muted-foreground))' }} tickLine={false} axisLine={false} fontSize={12} />
                             <YAxis tick={{ fill: 'hsl(var(--muted-foreground))' }} tickLine={false} axisLine={false} fontSize={12} />
@@ -208,7 +221,7 @@ function AppAnomaliesChart() {
                             <Bar dataKey="anomalies" fill="var(--color-anomalies)" radius={[4, 4, 0, 0]} />
                         </BarChart>
                     </ResponsiveContainer>
-                </ChartContainer>
+                </ChartContainer>}
             </CardContent>
         </Card>
     )
@@ -216,27 +229,50 @@ function AppAnomaliesChart() {
 
 
 export default function OverviewPage() {
+    const [data, setData] = useState<OverviewData | null>(null);
+    const [isLoading, setIsLoading] = useState(true);
+
+    useEffect(() => {
+        const fetchData = async () => {
+            setIsLoading(true);
+            // TODO: Replace with your actual API endpoint to fetch overview data
+            // try {
+            //     const response = await fetch('/api/overview');
+            //     const result = await response.json();
+            //     setData(result);
+            // } catch (error) {
+            //     console.error("Failed to fetch overview data:", error);
+            //     setData(null);
+            // } finally {
+            //     setIsLoading(false);
+            // }
+            
+            // For now, we'll stop loading but data will be null.
+            // In a real app, you would remove this and handle the fetch promise.
+            setIsLoading(false);
+        };
+        fetchData();
+    }, []);
+
     return (
         <div className="space-y-8">
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-                <AiDailyBriefing />
+                <AiDailyBriefing data={data} />
             </div>
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-                <StatCard title="Total API Requests" value={overviewData.apiRequests.toLocaleString()} icon={LineChart} />
-                <StatCard title="Error Rate" value={`${overviewData.errorRate}%`} icon={Waves} />
-                <StatCard title="Active Alerts" value={overviewData.activeAlerts} icon={Bug} />
-                <StatCard title="Cost Risk Meter" value={`${overviewData.costRisk}/10`} icon={Server} />
+                <StatCard title="Total API Requests" value={data?.apiRequests?.toLocaleString()} icon={LineChart} isLoading={isLoading} />
+                <StatCard title="Error Rate" value={data ? `${data.errorRate}%` : undefined} icon={Waves} isLoading={isLoading} />
+                <StatCard title="Active Alerts" value={data?.activeAlerts} icon={Bug} isLoading={isLoading} />
+                <StatCard title="Cost Risk Meter" value={data ? `${data.costRisk}/10` : undefined} icon={Server} isLoading={isLoading} />
             </div>
             <div className="grid grid-cols-1 xl:grid-cols-5 gap-4">
-                <AppAnomaliesChart />
-                <MicroservicesTopology />
+                <AppAnomaliesChart data={data?.appAnomalies} isLoading={isLoading} />
+                <MicroservicesTopology services={data?.microservices} failingEndpoints={data?.failingEndpoints} isLoading={isLoading} />
             </div>
             <div className="grid grid-cols-1 xl:grid-cols-5 gap-4">
-                 <SystemAnomaliesTable />
-                 <ApiRequestsChart />
+                 <SystemAnomaliesTable anomalies={data?.systemAnomalies} isLoading={isLoading} />
+                 <ApiRequestsChart data={data?.apiRequestsChart} isLoading={isLoading} />
             </div>
         </div>
     )
 }
-
-    

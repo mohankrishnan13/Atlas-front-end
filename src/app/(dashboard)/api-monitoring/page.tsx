@@ -1,10 +1,10 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { ArrowDown, ArrowUp, DollarSign, Gauge, Ban, LineChart } from "lucide-react";
-import { apiMonitoringData } from "@/lib/mock-data";
+import { ArrowDown, ArrowUp, DollarSign, Gauge, Ban, LineChart, LoaderCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
   ChartContainer,
@@ -12,6 +12,8 @@ import {
   ChartTooltipContent,
 } from "@/components/ui/chart"
 import { Line, LineChart as RechartsLineChart, CartesianGrid, XAxis, YAxis, Tooltip as RechartsTooltip, ResponsiveContainer, Legend } from "recharts"
+import { Skeleton } from "@/components/ui/skeleton";
+import type { ApiMonitoringData } from "@/lib/types";
 
 const chartConfig = {
   actual: {
@@ -24,7 +26,7 @@ const chartConfig = {
   },
 }
 
-function StatCard({ title, value, icon: Icon }: { title: string, value: string | number, icon: React.ElementType }) {
+function StatCard({ title, value, icon: Icon, isLoading }: { title: string, value?: string | number, icon: React.ElementType, isLoading: boolean }) {
     return (
         <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -32,21 +34,43 @@ function StatCard({ title, value, icon: Icon }: { title: string, value: string |
                 <Icon className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-                <div className="text-2xl font-bold">{typeof value === 'number' ? value.toLocaleString() : value}</div>
+                {isLoading ? <Skeleton className="h-8 w-24" /> : <div className="text-2xl font-bold">{value}</div>}
             </CardContent>
         </Card>
     )
 }
 
 export default function ApiMonitoringPage() {
+    const [data, setData] = useState<ApiMonitoringData | null>(null);
+    const [isLoading, setIsLoading] = useState(true);
+
+    useEffect(() => {
+        const fetchData = async () => {
+            setIsLoading(true);
+            // TODO: Replace with your actual API endpoint
+            // try {
+            //     const response = await fetch('/api/api-monitoring');
+            //     const result = await response.json();
+            //     setData(result);
+            // } catch (error) {
+            //     console.error("Failed to fetch API monitoring data:", error);
+            //     setData(null);
+            // } finally {
+            //     setIsLoading(false);
+            // }
+            setIsLoading(false); // Remove this when fetch is implemented
+        };
+        fetchData();
+    }, []);
+
     return (
         <div className="space-y-8">
             <h1 className="text-3xl font-bold">API Monitoring</h1>
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-                <StatCard title="API Calls Today" value={apiMonitoringData.apiCallsToday} icon={LineChart} />
-                <StatCard title="Blocked Requests" value={apiMonitoringData.blockedRequests} icon={Ban} />
-                <StatCard title="Average Latency" value={`${apiMonitoringData.avgLatency}ms`} icon={Gauge} />
-                <StatCard title="Estimated 3rd-Party API Cost" value={`$${apiMonitoringData.estimatedCost.toFixed(2)}`} icon={DollarSign} />
+                <StatCard title="API Calls Today" value={data?.apiCallsToday?.toLocaleString()} icon={LineChart} isLoading={isLoading} />
+                <StatCard title="Blocked Requests" value={data?.blockedRequests?.toLocaleString()} icon={Ban} isLoading={isLoading} />
+                <StatCard title="Average Latency" value={data ? `${data.avgLatency}ms` : undefined} icon={Gauge} isLoading={isLoading} />
+                <StatCard title="Estimated 3rd-Party API Cost" value={data ? `$${data.estimatedCost.toFixed(2)}` : undefined} icon={DollarSign} isLoading={isLoading} />
             </div>
 
             <Card>
@@ -54,9 +78,10 @@ export default function ApiMonitoringPage() {
                     <CardTitle>API Usage vs Expected AI Baseline</CardTitle>
                 </CardHeader>
                 <CardContent className="h-[400px]">
+                    {isLoading ? <div className="h-full w-full flex items-center justify-center"><Skeleton className="h-full w-full" /></div> :
                     <ChartContainer config={chartConfig} className="h-full w-full">
                         <ResponsiveContainer width="100%" height="100%">
-                            <RechartsLineChart data={apiMonitoringData.apiUsageChart} margin={{ top: 5, right: 20, left: -10, bottom: 5 }}>
+                            <RechartsLineChart data={data?.apiUsageChart} margin={{ top: 5, right: 20, left: -10, bottom: 5 }}>
                                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--border) / 0.5)" />
                                 <XAxis dataKey="name" tick={{ fill: 'hsl(var(--muted-foreground))' }} tickLine={false} axisLine={false} fontSize={12} />
                                 <YAxis tick={{ fill: 'hsl(var(--muted-foreground))' }} tickLine={false} axisLine={false} fontSize={12} tickFormatter={(value) => `${value / 1000}k`} />
@@ -69,7 +94,7 @@ export default function ApiMonitoringPage() {
                                 <Line type="monotone" dataKey="predicted" name="AI Baseline" stroke="hsl(var(--muted-foreground))" strokeWidth={2} strokeDasharray="5 5" dot={false} />
                             </RechartsLineChart>
                         </ResponsiveContainer>
-                    </ChartContainer>
+                    </ChartContainer>}
                 </CardContent>
             </Card>
 
@@ -89,7 +114,12 @@ export default function ApiMonitoringPage() {
                             </TableRow>
                         </TableHeader>
                         <TableBody>
-                            {apiMonitoringData.apiRouting.map((route) => (
+                            {isLoading && Array.from({length: 5}).map((_, i) => (
+                                <TableRow key={i}>
+                                    <TableCell colSpan={5}><Skeleton className="h-6 w-full" /></TableCell>
+                                </TableRow>
+                            ))}
+                            {!isLoading && data?.apiRouting.map((route) => (
                                 <TableRow key={route.id}>
                                     <TableCell className="font-medium">
                                         <div className="flex items-center gap-2">
@@ -120,6 +150,11 @@ export default function ApiMonitoringPage() {
                                     </TableCell>
                                 </TableRow>
                             ))}
+                             {!isLoading && (!data || data.apiRouting.length === 0) && (
+                                <TableRow>
+                                    <TableCell colSpan={5} className="text-center text-muted-foreground">No API routing data available.</TableCell>
+                                </TableRow>
+                            )}
                         </TableBody>
                     </Table>
                 </CardContent>

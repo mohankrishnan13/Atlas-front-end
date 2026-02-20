@@ -1,6 +1,6 @@
 'use server';
 /**
- * @fileOverview An AI Copilot for the Enterprise Anomaly Monitoring System (EAMS).
+ * @fileOverview An AI Copilot for the Advanced Traffic Layer Anomaly System (ATLAS).
  *
  * - askAICopilot - A function that handles natural language questions from security analysts.
  * - AICopilotChatInput - The input type for the askAICopilot function.
@@ -28,7 +28,7 @@ const aiCopilotPrompt = ai.definePrompt({
   name: 'aiCopilotPrompt',
   input: { schema: AICopilotChatInputSchema },
   output: { schema: AICopilotChatOutputSchema },
-  prompt: `You are an AI Copilot for an Enterprise Anomaly Monitoring System (EAMS).
+  prompt: `You are an AI Copilot for an Advanced Traffic Layer Anomaly System (ATLAS).
 Your role is to assist security analysts by answering natural language questions about system health, incidents, trends, and providing intelligent suggestions.
 Be concise, helpful, and focus on security-related insights.
 

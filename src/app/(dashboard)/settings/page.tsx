@@ -22,7 +22,7 @@ function GeneralSettings() {
             <CardContent className="space-y-4">
                 <div className="space-y-2">
                     <Label htmlFor="system-name">System Name</Label>
-                    <Input id="system-name" defaultValue="EAMS Production" />
+                    <Input id="system-name" defaultValue="ATLAS Production" />
                 </div>
                 <div className="space-y-2">
                     <Label htmlFor="timezone">Timezone</Label>

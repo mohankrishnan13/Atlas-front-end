@@ -35,7 +35,7 @@ const aiDailyThreatBriefingPrompt = ai.definePrompt({
   name: 'aiDailyThreatBriefingPrompt',
   input: {schema: DailyThreatBriefingInputSchema},
   output: {schema: DailyThreatBriefingOutputSchema},
-  prompt: `You are an AI assistant specialized in security operations, tasked with generating a concise daily threat briefing for an Enterprise Anomaly Monitoring System (EAMS).
+  prompt: `You are an AI assistant specialized in security operations, tasked with generating a concise daily threat briefing for an Advanced Traffic Layer Anomaly System (ATLAS).
 
 Summarize the current system health and any emerging threats based on the provided data. Highlight critical issues and potential areas of concern. The briefing should be professional, direct, and actionable.
 

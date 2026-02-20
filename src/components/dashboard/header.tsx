@@ -54,7 +54,7 @@ export function DashboardHeader() {
       <div className="flex items-center gap-2">
         <ShieldCheck className="h-7 w-7 text-primary" />
         <h1 className="text-lg font-semibold tracking-tighter">
-          EAMS <span className="hidden lg:inline-block font-normal text-muted-foreground">| Enterprise Anomaly Monitoring System</span>
+          ATLAS <span className="hidden lg:inline-block font-normal text-muted-foreground">| Advanced Traffic Layer Anomaly System</span>
         </h1>
       </div>
 

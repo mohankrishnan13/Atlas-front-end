@@ -4,7 +4,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { cn } from '@/lib/utils';
 
 export const metadata: Metadata = {
-  title: 'EAMS: Enterprise Anomaly Monitoring System',
+  title: 'ATLAS: Advanced Traffic Layer Anomaly System',
   description: 'A cloud-native SOC dashboard for monitoring a microservices architecture.',
 };
 

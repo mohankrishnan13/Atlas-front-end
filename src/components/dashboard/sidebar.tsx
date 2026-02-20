@@ -93,7 +93,7 @@ export function DashboardSidebar() {
              <div className="flex h-full flex-col">
               <div className="h-16 flex items-center px-4 border-b border-border">
                 <ShieldCheck className="h-7 w-7 text-primary" />
-                <h1 className="ml-2 text-xl font-bold">EAMS</h1>
+                <h1 className="ml-2 text-xl font-bold">ATLAS</h1>
               </div>
               <div className="py-4">
                 <NavLinks isCollapsed={false} />
@@ -103,7 +103,7 @@ export function DashboardSidebar() {
         </Sheet>
          <div className="flex items-center gap-2 ml-4">
             <ShieldCheck className="h-7 w-7 text-primary" />
-            <h1 className="text-xl font-bold">EAMS</h1>
+            <h1 className="text-xl font-bold">ATLAS</h1>
         </div>
       </div>
 
@@ -117,7 +117,7 @@ export function DashboardSidebar() {
         <div className="flex items-center justify-between h-16 border-b border-border px-4">
           <Link href="/overview" className={cn('flex items-center gap-2 overflow-hidden', isCollapsed && 'justify-center w-full')}>
             <ShieldCheck className="h-7 w-7 text-primary flex-shrink-0" />
-            <span className={cn('text-xl font-bold', isCollapsed && 'sr-only')}>EAMS</span>
+            <span className={cn('text-xl font-bold', isCollapsed && 'sr-only')}>ATLAS</span>
           </Link>
         </div>
         <div className="flex-1 py-4 overflow-y-auto">

@@ -1,8 +1,11 @@
+"use client";
+
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { BarChart, Bug, LineChart, Server, Waves } from "lucide-react";
-import { overviewData, apiMonitoringData, networkTrafficData } from "@/lib/mock-data";
+import { Bug, LineChart, Server, Waves } from "lucide-react";
+import { overviewData } from "@/lib/mock-data";
 import { cn, getSeverityClassNames } from "@/lib/utils";
 import type { Severity } from "@/lib/types";
 
@@ -13,27 +16,34 @@ import {
   ChartTooltip,
   ChartTooltipContent,
 } from "@/components/ui/chart"
-import { Bar, BarChart as RechartsBarChart, Line, LineChart as RechartsLineChart, CartesianGrid, XAxis, YAxis, Tooltip as RechartsTooltip, ResponsiveContainer } from "recharts"
+import { Line, LineChart as RechartsLineChart, CartesianGrid, XAxis, YAxis, Tooltip as RechartsTooltip, ResponsiveContainer } from "recharts"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 
-async function AiDailyBriefing() {
-    const briefingInput = {
-        totalApiRequests: overviewData.apiRequests,
-        errorRatePercentage: overviewData.errorRate,
-        activeAlerts: overviewData.activeAlerts,
-        costRiskMeter: overviewData.costRisk,
-        failingApplications: overviewData.microservices.filter(s => s.status === 'Failing').map(s => s.name),
-        recentSystemAnomalies: overviewData.systemAnomalies.map(a => `${a.service}: ${a.type}`),
-    };
+function AiDailyBriefing() {
+    const [briefing, setBriefing] = useState("Generating briefing...");
 
-    let briefing = "AI briefing is currently unavailable. Please check system status.";
-    try {
-        const result = await generateDailyThreatBriefing(briefingInput);
-        briefing = result.briefing;
-    } catch (error) {
-        console.error("Failed to generate AI daily threat briefing:", error);
-    }
+    useEffect(() => {
+        const fetchBriefing = async () => {
+            const briefingInput = {
+                totalApiRequests: overviewData.apiRequests,
+                errorRatePercentage: overviewData.errorRate,
+                activeAlerts: overviewData.activeAlerts,
+                costRiskMeter: overviewData.costRisk,
+                failingApplications: overviewData.microservices.filter(s => s.status === 'Failing').map(s => s.name),
+                recentSystemAnomalies: overviewData.systemAnomalies.map(a => `${a.service}: ${a.type}`),
+            };
+
+            try {
+                const result = await generateDailyThreatBriefing(briefingInput);
+                setBriefing(result.briefing);
+            } catch (error) {
+                console.error("Failed to generate AI daily threat briefing:", error);
+                setBriefing("AI briefing is currently unavailable. Please check system status.");
+            }
+        };
+        fetchBriefing();
+    }, []);
     
     return (
         <Card className="col-span-1 md:col-span-2 xl:col-span-4 bg-card">

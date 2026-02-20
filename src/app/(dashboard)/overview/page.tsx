@@ -16,7 +16,7 @@ import {
   ChartTooltip,
   ChartTooltipContent,
 } from "@/components/ui/chart"
-import { Line, LineChart as RechartsLineChart, CartesianGrid, XAxis, YAxis, Tooltip as RechartsTooltip, ResponsiveContainer } from "recharts"
+import { Line, LineChart as RechartsLineChart, CartesianGrid, XAxis, YAxis, Tooltip as RechartsTooltip, ResponsiveContainer, BarChart, Bar } from "recharts"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 
@@ -25,6 +25,10 @@ function AiDailyBriefing() {
 
     useEffect(() => {
         const fetchBriefing = async () => {
+            if (!overviewData) {
+                setBriefing("Overview data is not available.");
+                return;
+            }
             const briefingInput = {
                 totalApiRequests: overviewData.apiRequests,
                 errorRatePercentage: overviewData.errorRate,
@@ -177,6 +181,39 @@ function SystemAnomaliesTable() {
     )
 }
 
+const appAnomaliesChartConfig = {
+  anomalies: {
+    label: "Anomalies",
+    color: "hsl(var(--chart-2))",
+  },
+}
+
+function AppAnomaliesChart() {
+    return (
+        <Card className="col-span-1 md:col-span-2 xl:col-span-2">
+            <CardHeader>
+                <CardTitle>Anomalies by Application</CardTitle>
+            </CardHeader>
+            <CardContent className="h-[300px]">
+                <ChartContainer config={appAnomaliesChartConfig} className="h-full w-full">
+                    <ResponsiveContainer width="100%" height="100%">
+                        <BarChart data={overviewData.appAnomalies} margin={{ top: 5, right: 20, left: -10, bottom: 5 }}>
+                             <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--border) / 0.5)" />
+                            <XAxis dataKey="name" tick={{ fill: 'hsl(var(--muted-foreground))' }} tickLine={false} axisLine={false} fontSize={12} />
+                            <YAxis tick={{ fill: 'hsl(var(--muted-foreground))' }} tickLine={false} axisLine={false} fontSize={12} />
+                            <RechartsTooltip
+                                content={<ChartTooltipContent hideLabel />}
+                                cursor={{ fill: 'hsl(var(--muted))' }}
+                            />
+                            <Bar dataKey="anomalies" fill="var(--color-anomalies)" radius={[4, 4, 0, 0]} />
+                        </BarChart>
+                    </ResponsiveContainer>
+                </ChartContainer>
+            </CardContent>
+        </Card>
+    )
+}
+
 
 export default function OverviewPage() {
     return (
@@ -196,7 +233,7 @@ export default function OverviewPage() {
             </div>
             <div className="grid grid-cols-1 xl:grid-cols-5 gap-4">
                  <SystemAnomaliesTable />
-                 {/* Placeholder for other components */}
+                 <AppAnomaliesChart />
             </div>
         </div>
     )

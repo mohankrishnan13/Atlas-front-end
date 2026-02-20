@@ -36,6 +36,16 @@ export const overviewData = {
   errorRate: 1.7,
   activeAlerts: 4,
   costRisk: 7.2,
+  appAnomalies: [
+    { name: 'Payment-Svc', anomalies: 65 },
+    { name: 'Auth-Svc', anomalies: 42 },
+    { name: 'User-DB', anomalies: 28 },
+    { name: 'API-GW', anomalies: 15 },
+    { name: 'Frontend', anomalies: 89 },
+    { name: 'Notify-Svc', anomalies: 12 },
+    { name: 'Inventory-Svc', anomalies: 55 },
+    { name: 'Order-Svc', anomalies: 30 },
+  ],
   microservices: [
     { id: 'payment-service', name: 'Payment-Service', status: 'Failing' as const, position: { top: '30%', left: '50%' }, connections: ['api-gateway', 'order-service'] },
     { id: 'auth-service', name: 'Auth-Service', status: 'Healthy' as const, position: { top: '50%', left: '20%' }, connections: ['api-gateway'] },

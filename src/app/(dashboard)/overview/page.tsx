@@ -228,13 +228,15 @@ export default function OverviewPage() {
                 <StatCard title="Cost Risk Meter" value={`${overviewData.costRisk}/10`} icon={Server} />
             </div>
             <div className="grid grid-cols-1 xl:grid-cols-5 gap-4">
+                <AppAnomaliesChart />
                 <MicroservicesTopology />
-                <ApiRequestsChart />
             </div>
             <div className="grid grid-cols-1 xl:grid-cols-5 gap-4">
                  <SystemAnomaliesTable />
-                 <AppAnomaliesChart />
+                 <ApiRequestsChart />
             </div>
         </div>
     )
 }
+
+    

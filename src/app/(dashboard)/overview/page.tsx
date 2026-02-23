@@ -56,9 +56,9 @@ function AiDailyBriefing({ data }: { data: OverviewData | null }) {
                 <CardTitle>AI Daily Threat Briefing</CardTitle>
             </CardHeader>
             <CardContent>
-                <p className="text-muted-foreground">
+                <div className="text-muted-foreground">
                     {data ? briefing : <Skeleton className="h-12 w-full" />}
-                </p>
+                </div>
             </CardContent>
         </Card>
     )
@@ -108,6 +108,11 @@ function MicroservicesTopology({ services, failingEndpoints, isLoading }: { serv
                         </Tooltip>
                     </TooltipProvider>
                 ))}
+                 {!isLoading && (!services || services.length === 0) && (
+                    <div className="flex items-center justify-center h-full">
+                        <p className="text-muted-foreground">No microservice data available.</p>
+                    </div>
+                )}
             </CardContent>
         </Card>
     );
@@ -125,6 +130,7 @@ function ApiRequestsChart({ data, isLoading }: { data?: TimeSeriesData[], isLoad
             </CardHeader>
             <CardContent className="h-[300px]">
                 {isLoading ? <div className="h-full flex items-center justify-center"><Skeleton className="h-full w-full" /></div> :
+                !data || data.length === 0 ? <div className="h-full flex items-center justify-center text-muted-foreground">No API request data.</div> :
                 <ChartContainer config={apiChartConfig} className="h-full w-full">
                     <ResponsiveContainer width="100%" height="100%">
                         <RechartsLineChart data={data} margin={{ top: 5, right: 20, left: -10, bottom: 5 }}>
@@ -208,6 +214,7 @@ function AppAnomaliesChart({ data, isLoading }: { data?: AppAnomaly[], isLoading
             </CardHeader>
             <CardContent className="h-[300px]">
                 {isLoading ? <div className="h-full flex items-center justify-center"><Skeleton className="h-full w-full" /></div> :
+                !data || data.length === 0 ? <div className="h-full flex items-center justify-center text-muted-foreground">No anomaly data.</div> :
                 <ChartContainer config={appAnomaliesChartConfig} className="h-full w-full">
                     <ResponsiveContainer width="100%" height="100%">
                         <BarChart data={data} margin={{ top: 5, right: 20, left: -10, bottom: 5 }}>
@@ -236,20 +243,16 @@ export default function OverviewPage() {
         const fetchData = async () => {
             setIsLoading(true);
             // TODO: Replace with your actual API endpoint to fetch overview data
-            // try {
-            //     const response = await fetch('/api/overview');
-            //     const result = await response.json();
-            //     setData(result);
-            // } catch (error) {
-            //     console.error("Failed to fetch overview data:", error);
-            //     setData(null);
-            // } finally {
-            //     setIsLoading(false);
-            // }
-            
-            // For now, we'll stop loading but data will be null.
-            // In a real app, you would remove this and handle the fetch promise.
-            setIsLoading(false);
+            try {
+                // const response = await fetch('/api/overview');
+                // const result = await response.json();
+                // setData(result);
+            } catch (error) {
+                console.error("Failed to fetch overview data:", error);
+                setData(null);
+            } finally {
+                setIsLoading(false);
+            }
         };
         fetchData();
     }, []);

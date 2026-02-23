@@ -143,18 +143,19 @@ function UserAccess() {
     useEffect(() => {
         const fetchData = async () => {
             setIsLoading(true);
-            // TODO: Replace with your actual API endpoint to fetch users
-            // try {
-            //     const response = await fetch('/api/users');
-            //     const result = await response.json();
-            //     setUsers(result);
-            // } catch (error) {
-            //     console.error("Failed to fetch users:", error);
-            //     setUsers([]);
-            // } finally {
-            //     setIsLoading(false);
-            // }
-            setIsLoading(false); // Remove this when fetch is implemented
+            try {
+                const response = await fetch('/api/users');
+                 if (!response.ok) {
+                    throw new Error(`API call failed with status: ${response.status}`);
+                }
+                const result = await response.json();
+                setUsers(result);
+            } catch (error) {
+                console.error("Failed to fetch users:", error);
+                setUsers([]);
+            } finally {
+                setIsLoading(false);
+            }
         };
         fetchData();
     }, []);

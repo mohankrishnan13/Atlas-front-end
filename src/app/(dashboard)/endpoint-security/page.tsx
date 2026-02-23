@@ -92,28 +92,47 @@ export default function EndpointSecurityPage() {
     useEffect(() => {
         const fetchData = async () => {
             setIsLoading(true);
-            // TODO: Replace with your actual API endpoint
-            // try {
-            //     const response = await fetch('/api/endpoint-security');
-            //     const result = await response.json();
-            //     setData(result);
-            // } catch (error) {
-            //     console.error("Failed to fetch endpoint security data:", error);
-            //     setData(null);
-            // } finally {
-            //     setIsLoading(false);
-            // }
-            setIsLoading(false); // Remove this when fetch is implemented
+            try {
+                const response = await fetch('/api/endpoint-security');
+                if (!response.ok) {
+                    throw new Error(`API call failed with status: ${response.status}`);
+                }
+                const result = await response.json();
+                setData(result);
+            } catch (error) {
+                console.error("Failed to fetch endpoint security data:", error);
+                setData(null);
+            } finally {
+                setIsLoading(false);
+            }
         };
         fetchData();
     }, []);
 
-    const handleQuarantine = (workstationId: string) => {
-        // TODO: This should trigger a backend API call to quarantine the device
-        toast({
-            title: "Quarantine Action",
-            description: `Device ${workstationId} has been sent to quarantine.`,
-        });
+    const handleQuarantine = async (workstationId: string) => {
+        try {
+            const response = await fetch('/api/endpoint-security/quarantine', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ workstationId }),
+            });
+
+            if (!response.ok) {
+                throw new Error('Quarantine command failed');
+            }
+            
+            toast({
+                title: "Quarantine Action",
+                description: `Device ${workstationId} has been sent to quarantine.`,
+            });
+        } catch (error) {
+            console.error('Quarantine failed:', error);
+             toast({
+                title: "Error",
+                description: `Failed to quarantine device ${workstationId}.`,
+                variant: 'destructive',
+            });
+        }
     }
 
     return (

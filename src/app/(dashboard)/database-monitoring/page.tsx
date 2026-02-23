@@ -46,18 +46,19 @@ export default function DatabaseMonitoringPage() {
      useEffect(() => {
         const fetchData = async () => {
             setIsLoading(true);
-            // TODO: Replace with your actual API endpoint
-            // try {
-            //     const response = await fetch('/api/db-monitoring');
-            //     const result = await response.json();
-            //     setData(result);
-            // } catch (error) {
-            //     console.error("Failed to fetch database monitoring data:", error);
-            //     setData(null);
-            // } finally {
-            //     setIsLoading(false);
-            // }
-            setIsLoading(false); // Remove this when fetch is implemented
+            try {
+                const response = await fetch('/api/db-monitoring');
+                 if (!response.ok) {
+                    throw new Error(`API call failed with status: ${response.status}`);
+                }
+                const result = await response.json();
+                setData(result);
+            } catch (error) {
+                console.error("Failed to fetch database monitoring data:", error);
+                setData(null);
+            } finally {
+                setIsLoading(false);
+            }
         };
         fetchData();
     }, []);

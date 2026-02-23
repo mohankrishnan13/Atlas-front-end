@@ -38,19 +38,41 @@ function IncidentDetailSheet({ incident, open, onOpenChange }: { incident: Incid
                 .then(setSummary)
                 .catch(err => {
                     console.error("AI summary failed:", err);
+                    toast({
+                        title: "AI Summary Failed",
+                        description: "Could not generate AI summary.",
+                        variant: "destructive",
+                    });
                     setSummary({ summaryText: "Could not generate AI summary.", attackVector: "N/A", potentialImpact: "N/A", context: "N/A" });
                 })
                 .finally(() => setIsLoading(false));
         }
-    }, [incident, open]);
+    }, [incident, open, toast]);
 
-    const handleRemediation = (action: string) => {
-        // TODO: This should trigger a backend API call
-        toast({
-            title: `Action: ${action}`,
-            description: `Action taken for incident ${incident?.id}`,
-        });
-        onOpenChange(false);
+    const handleRemediation = async (action: string) => {
+        if (!incident) return;
+        try {
+            const response = await fetch('/api/incidents/remediate', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ incidentId: incident.id, action: action }),
+            });
+            if (!response.ok) {
+                throw new Error('Remediation action failed');
+            }
+            toast({
+                title: `Action: ${action}`,
+                description: `Action taken for incident ${incident.id}`,
+            });
+            onOpenChange(false);
+        } catch(error) {
+             console.error(`Remediation action '${action}' failed:`, error);
+             toast({
+                title: "Error",
+                description: `Failed to perform action '${action}' for incident ${incident.id}.`,
+                variant: 'destructive',
+            });
+        }
     };
 
     if (!incident) return null;
@@ -129,18 +151,19 @@ export default function IncidentsPage() {
     useEffect(() => {
         const fetchData = async () => {
             setIsLoading(true);
-            // TODO: Replace with your actual API endpoint to fetch incidents
-            // try {
-            //     const response = await fetch('/api/incidents');
-            //     const result = await response.json();
-            //     setIncidents(result);
-            // } catch (error) {
-            //     console.error("Failed to fetch incidents:", error);
-            //     setIncidents([]);
-            // } finally {
-            //     setIsLoading(false);
-            // }
-            setIsLoading(false); // Remove this when fetch is implemented
+            try {
+                const response = await fetch('/api/incidents');
+                if (!response.ok) {
+                    throw new Error(`API call failed with status: ${response.status}`);
+                }
+                const result = await response.json();
+                setIncidents(result);
+            } catch (error) {
+                console.error("Failed to fetch incidents:", error);
+                setIncidents([]);
+            } finally {
+                setIsLoading(false);
+            }
         };
         fetchData();
     }, []);

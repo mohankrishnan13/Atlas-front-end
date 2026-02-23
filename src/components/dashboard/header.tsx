@@ -58,19 +58,19 @@ export function DashboardHeader() {
   useEffect(() => {
     async function fetchData() {
       setIsLoading(true);
-      // TODO: Replace with your actual API endpoint to fetch header data
-      // try {
-      //   const res = await fetch('/api/header-data');
-      //   const result = await res.json();
-      //   setData(result);
-      // } catch (error) {
-      //   console.error("Failed to fetch header data", error);
-      //   setData(null);
-      // }
-      
-      // For now, we'll stop loading but data will be null.
-      // In a real app, you would remove this and handle the fetch promise.
-      setIsLoading(false);
+      try {
+        const res = await fetch('/api/header-data');
+         if (!res.ok) {
+            throw new Error(`API call failed with status: ${res.status}`);
+        }
+        const result = await res.json();
+        setData(result);
+      } catch (error) {
+        console.error("Failed to fetch header data", error);
+        setData(null);
+      } finally {
+        setIsLoading(false);
+      }
     }
     fetchData();
   }, []);
@@ -88,7 +88,7 @@ export function DashboardHeader() {
         <div className="w-full max-w-sm">
            <Select defaultValue="all" disabled={isLoading || !data?.applications}>
             <SelectTrigger className="w-full">
-              <SelectValue placeholder="Application Context" />
+              <SelectValue placeholder={isLoading ? "Loading..." : "Application Context"} />
             </SelectTrigger>
             <SelectContent>
               {data?.applications?.map((app) => (
@@ -96,6 +96,7 @@ export function DashboardHeader() {
                   {app.name}
                 </SelectItem>
               ))}
+               {!isLoading && data?.applications?.length === 0 && <SelectItem value="none" disabled>No applications found</SelectItem>}
             </SelectContent>
           </Select>
         </div>

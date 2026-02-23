@@ -20,16 +20,18 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { Skeleton } from "@/components/ui/skeleton";
 
 
-function AiDailyBriefing({ data }: { data: OverviewData | null }) {
+function AiDailyBriefing({ data, isLoading }: { data: OverviewData | null, isLoading: boolean }) {
     const [briefing, setBriefing] = useState("Generating briefing...");
+    const [isBriefingLoading, setIsBriefingLoading] = useState(false);
 
     useEffect(() => {
-        if (!data) {
+        if (!data || isLoading) {
             setBriefing("Briefing is unavailable while data is loading.");
             return;
         }
 
         const fetchBriefing = async () => {
+            setIsBriefingLoading(true);
             const briefingInput = {
                 totalApiRequests: data.apiRequests,
                 errorRatePercentage: data.errorRate,
@@ -45,10 +47,12 @@ function AiDailyBriefing({ data }: { data: OverviewData | null }) {
             } catch (error) {
                 console.error("Failed to generate AI daily threat briefing:", error);
                 setBriefing("AI briefing is currently unavailable. Please check system status.");
+            } finally {
+                setIsBriefingLoading(false);
             }
         };
         fetchBriefing();
-    }, [data]);
+    }, [data, isLoading]);
     
     return (
         <Card className="col-span-1 md:col-span-2 xl:col-span-4 bg-card">
@@ -57,7 +61,7 @@ function AiDailyBriefing({ data }: { data: OverviewData | null }) {
             </CardHeader>
             <CardContent>
                 <div className="text-muted-foreground">
-                    {data ? briefing : <Skeleton className="h-12 w-full" />}
+                    {isLoading || isBriefingLoading ? <div className="space-y-2"><Skeleton className="h-4 w-full" /><Skeleton className="h-4 w-3/4" /></div> : briefing}
                 </div>
             </CardContent>
         </Card>
@@ -242,11 +246,13 @@ export default function OverviewPage() {
     useEffect(() => {
         const fetchData = async () => {
             setIsLoading(true);
-            // TODO: Replace with your actual API endpoint to fetch overview data
             try {
-                // const response = await fetch('/api/overview');
-                // const result = await response.json();
-                // setData(result);
+                const response = await fetch('/api/overview');
+                if (!response.ok) {
+                    throw new Error(`API call failed with status: ${response.status}`);
+                }
+                const result = await response.json();
+                setData(result);
             } catch (error) {
                 console.error("Failed to fetch overview data:", error);
                 setData(null);
@@ -260,7 +266,7 @@ export default function OverviewPage() {
     return (
         <div className="space-y-8">
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-                <AiDailyBriefing data={data} />
+                <AiDailyBriefing data={data} isLoading={isLoading} />
             </div>
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
                 <StatCard title="Total API Requests" value={data?.apiRequests?.toLocaleString()} icon={LineChart} isLoading={isLoading} />

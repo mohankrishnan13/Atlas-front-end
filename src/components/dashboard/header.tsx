@@ -1,31 +1,31 @@
-"use client";
+'use client';
 
-import React, { useState, useEffect } from "react";
-import Link from "next/link";
+import React, { useState, useEffect } from 'react';
+import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import {
   Bell,
   LogOut,
   Settings,
   ShieldCheck,
   User,
-  LoaderCircle,
-} from "lucide-react";
+} from 'lucide-react';
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select";
-import { Button } from "@/components/ui/button";
+} from '@/components/ui/select';
+import { Button } from '@/components/ui/button';
 import {
   Sheet,
   SheetContent,
   SheetHeader,
   SheetTitle,
   SheetTrigger,
-} from "@/components/ui/sheet";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+} from '@/components/ui/sheet';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -33,13 +33,13 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { cn, getSeverityClassNames } from "@/lib/utils";
-import { Badge } from "../ui/badge";
-import type { RecentAlert, User as UserType, Application } from "@/lib/types";
-import { Skeleton } from "../ui/skeleton";
-import { useToast } from "@/hooks/use-toast";
-import { useEnvironment } from "@/context/EnvironmentContext";
+} from '@/components/ui/dropdown-menu';
+import { cn, getSeverityClassNames } from '@/lib/utils';
+import { Badge } from '../ui/badge';
+import type { RecentAlert, User as UserType } from '@/lib/types';
+import { Skeleton } from '../ui/skeleton';
+import { useToast } from '@/hooks/use-toast';
+import { useEnvironment } from '@/context/EnvironmentContext';
 
 function AlertItem({ alert }: { alert: RecentAlert }) {
   const severityClasses = getSeverityClassNames(alert.severity);
@@ -47,8 +47,8 @@ function AlertItem({ alert }: { alert: RecentAlert }) {
     <div className="flex items-start gap-3 p-4 border-b border-border last:border-b-0 hover:bg-muted/50">
       <div
         className={cn(
-          "mt-1 h-2.5 w-2.5 rounded-full",
-          severityClasses.bg.replace("bg-", "")
+          'mt-1 h-2.5 w-2.5 rounded-full',
+          severityClasses.bg.replace('bg-', '')
         )}
       />
       <div className="flex-1">
@@ -57,7 +57,7 @@ function AlertItem({ alert }: { alert: RecentAlert }) {
           <p className="text-xs text-muted-foreground">{alert.timestamp}</p>
         </div>
         <p className="text-sm text-muted-foreground">{alert.message}</p>
-        <Badge variant="outline" className={cn("mt-2", severityClasses.badge)}>
+        <Badge variant="outline" className={cn('mt-2', severityClasses.badge)}>
           {alert.severity}
         </Badge>
       </div>
@@ -67,7 +67,6 @@ function AlertItem({ alert }: { alert: RecentAlert }) {
 
 type HeaderData = {
   user: UserType;
-  applications: Application[];
   recentAlerts: RecentAlert[];
 };
 
@@ -76,6 +75,7 @@ export function DashboardHeader() {
   const [isLoading, setIsLoading] = useState(true);
   const { toast } = useToast();
   const { environment, setEnvironment } = useEnvironment();
+  const router = useRouter();
 
   useEffect(() => {
     async function fetchData() {
@@ -85,7 +85,7 @@ export function DashboardHeader() {
         if (!res.ok) {
           const errorData = await res
             .json()
-            .catch(() => ({ message: "An unknown API error occurred." }));
+            .catch(() => ({ message: 'An unknown API error occurred.' }));
           throw new Error(
             errorData.details ||
               errorData.message ||
@@ -95,10 +95,10 @@ export function DashboardHeader() {
         const result = await res.json();
         setData(result);
       } catch (error: any) {
-        console.error("Failed to fetch header data", error);
+        console.error('Failed to fetch header data', error);
         toast({
-          variant: "destructive",
-          title: "Failed to Load Header Data",
+          variant: 'destructive',
+          title: 'Failed to Load Header Data',
           description: error.message,
         });
         setData(null);
@@ -109,48 +109,33 @@ export function DashboardHeader() {
     fetchData();
   }, [toast, environment]);
 
+  const handleLogout = () => {
+    // In a real app, you would also clear auth tokens here
+    router.push('/login');
+  };
+
   return (
-    <header className="sticky top-0 z-30 hidden h-16 items-center gap-4 border-b bg-card px-4 md:flex md:px-6">
+    <header className="sticky top-0 z-30 hidden h-16 items-center justify-between border-b border-slate-800 bg-background px-4 text-slate-200 md:flex md:px-6">
+      {/* Left Side: Branding */}
       <div className="flex items-center gap-2">
         <ShieldCheck className="h-7 w-7 text-primary" />
-        <h1 className="text-lg font-semibold tracking-tighter">
-          ATLAS{" "}
-          <span className="hidden lg:inline-block font-normal text-muted-foreground">
-            | Advanced Traffic Layer Anomaly System
+        <div className="flex items-center text-lg font-semibold tracking-wide">
+          <span className="text-white">ATLAS</span>
+          <span className="mx-2 text-slate-600">|</span>
+          <span className="text-slate-400 hidden lg:inline-block font-normal text-sm">
+            Advanced Traffic Layer Anomaly System
           </span>
-        </h1>
-      </div>
-
-      <div className="flex-1 flex justify-center">
-        <div className="w-full max-w-sm">
-          <Select defaultValue="all" disabled={isLoading || !data?.applications}>
-            <SelectTrigger className="w-full">
-              <SelectValue
-                placeholder={isLoading ? "Loading..." : "Application Context"}
-              />
-            </SelectTrigger>
-            <SelectContent>
-              {data?.applications?.map((app) => (
-                <SelectItem key={app.id} value={app.id}>
-                  {app.name}
-                </SelectItem>
-              ))}
-              {!isLoading && data?.applications?.length === 0 && (
-                <SelectItem value="none" disabled>
-                  No applications found
-                </SelectItem>
-              )}
-            </SelectContent>
-          </Select>
         </div>
       </div>
 
+      {/* Right Side: Controls & Profile */}
       <div className="flex items-center gap-4">
+        {/* Global Environment Switcher */}
         <Select
           value={environment}
-          onValueChange={(value) => setEnvironment(value as "cloud" | "local")}
+          onValueChange={(value) => setEnvironment(value as 'cloud' | 'local')}
         >
-          <SelectTrigger className="w-[120px]">
+          <SelectTrigger className="w-[120px] bg-card border-slate-700 focus:ring-slate-500">
             <SelectValue placeholder="Environment" />
           </SelectTrigger>
           <SelectContent>
@@ -159,12 +144,17 @@ export function DashboardHeader() {
           </SelectContent>
         </Select>
 
+        {/* Notifications */}
         <Sheet>
           <SheetTrigger asChild>
-            <Button variant="ghost" size="icon" className="relative">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="relative text-slate-400 hover:text-white"
+            >
               <Bell className="h-5 w-5" />
               {(data?.recentAlerts?.length ?? 0) > 0 && (
-                <span className="absolute top-0 right-0 flex h-2 w-2">
+                <span className="absolute top-1 right-1 flex h-2 w-2">
                   <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
                   <span className="relative inline-flex rounded-full h-2 w-2 bg-red-500"></span>
                 </span>
@@ -193,9 +183,16 @@ export function DashboardHeader() {
           </SheetContent>
         </Sheet>
 
+        {/* Vertical Divider */}
+        <div className="h-6 w-px bg-slate-800"></div>
+
+        {/* User Profile Dropdown */}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="ghost" className="relative h-10 w-10 rounded-full">
+            <Button
+              variant="ghost"
+              className="relative h-10 w-10 rounded-full"
+            >
               {isLoading || !data?.user ? (
                 <Skeleton className="h-10 w-10 rounded-full" />
               ) : (
@@ -203,9 +200,13 @@ export function DashboardHeader() {
                   <AvatarImage
                     src={data.user.avatar}
                     alt={data.user.name}
-                    data-ai-hint="woman face"
                   />
-                  <AvatarFallback>{data.user.name.charAt(0)}</AvatarFallback>
+                  <AvatarFallback>
+                    {data.user.name
+                      .split(' ')
+                      .map((n) => n[0])
+                      .join('')}
+                  </AvatarFallback>
                 </Avatar>
               )}
             </Button>
@@ -214,17 +215,19 @@ export function DashboardHeader() {
             <DropdownMenuLabel className="font-normal">
               <div className="flex flex-col space-y-1">
                 <p className="text-sm font-medium leading-none">
-                  {data?.user?.name || "User"}
+                  {data?.user?.name || 'User'}
                 </p>
                 <p className="text-xs leading-none text-muted-foreground">
-                  {data?.user?.email || "email@example.com"}
+                  {data?.user?.email || 'email@example.com'}
                 </p>
               </div>
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
-            <DropdownMenuItem>
-              <User className="mr-2 h-4 w-4" />
-              <span>Profile</span>
+            <DropdownMenuItem asChild>
+              <Link href="/settings">
+                <User className="mr-2 h-4 w-4" />
+                <span>Profile</span>
+              </Link>
             </DropdownMenuItem>
             <DropdownMenuItem asChild>
               <Link href="/settings">
@@ -233,7 +236,10 @@ export function DashboardHeader() {
               </Link>
             </DropdownMenuItem>
             <DropdownMenuSeparator />
-            <DropdownMenuItem>
+            <DropdownMenuItem
+              onClick={handleLogout}
+              className="focus:bg-destructive/20 focus:text-red-400"
+            >
               <LogOut className="mr-2 h-4 w-4" />
               <span>Log out</span>
             </DropdownMenuItem>

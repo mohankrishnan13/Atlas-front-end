@@ -13,6 +13,7 @@ import {
   ChartTooltipContent,
 } from "@/components/ui/chart"
 import { Area, AreaChart, CartesianGrid, XAxis, YAxis, Tooltip as RechartsTooltip, ResponsiveContainer, Legend } from "recharts"
+import { useToast } from "@/hooks/use-toast";
 
 const chartConfig = {
   SELECT: { label: "SELECT", color: "hsl(var(--chart-1))" },
@@ -42,6 +43,7 @@ function StatCard({ title, value, unit, icon: Icon, isLoading }: { title: string
 export default function DatabaseMonitoringPage() {
     const [data, setData] = useState<DbMonitoringData | null>(null);
     const [isLoading, setIsLoading] = useState(true);
+    const { toast } = useToast();
 
      useEffect(() => {
         const fetchData = async () => {
@@ -49,19 +51,25 @@ export default function DatabaseMonitoringPage() {
             try {
                 const response = await fetch('/api/db-monitoring');
                  if (!response.ok) {
-                    throw new Error(`API call failed with status: ${response.status}`);
+                    const errorData = await response.json().catch(() => ({ message: 'An unknown API error occurred.' }));
+                    throw new Error(errorData.details || errorData.message || `API call failed with status: ${response.status}`);
                 }
                 const result = await response.json();
                 setData(result);
-            } catch (error) {
+            } catch (error: any) {
                 console.error("Failed to fetch database monitoring data:", error);
+                toast({
+                    variant: "destructive",
+                    title: "Failed to Load Database Monitoring Data",
+                    description: error.message,
+                });
                 setData(null);
             } finally {
                 setIsLoading(false);
             }
         };
         fetchData();
-    }, []);
+    }, [toast]);
 
     return (
         <div className="space-y-8">

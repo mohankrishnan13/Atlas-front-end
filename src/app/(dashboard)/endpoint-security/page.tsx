@@ -13,7 +13,7 @@ import {
   ChartTooltip,
   ChartTooltipContent,
 } from "@/components/ui/chart"
-import { Pie, PieChart, Cell, ResponsiveContainer, Legend } from "recharts"
+import { Pie, PieChart, Cell, ResponsiveContainer, Legend, Tooltip as RechartsTooltip } from "recharts"
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -95,19 +95,25 @@ export default function EndpointSecurityPage() {
             try {
                 const response = await fetch('/api/endpoint-security');
                 if (!response.ok) {
-                    throw new Error(`API call failed with status: ${response.status}`);
+                    const errorData = await response.json().catch(() => ({ message: 'An unknown API error occurred.' }));
+                    throw new Error(errorData.details || errorData.message || `API call failed with status: ${response.status}`);
                 }
                 const result = await response.json();
                 setData(result);
-            } catch (error) {
+            } catch (error: any) {
                 console.error("Failed to fetch endpoint security data:", error);
+                toast({
+                    variant: "destructive",
+                    title: "Failed to Load Endpoint Security Data",
+                    description: error.message,
+                });
                 setData(null);
             } finally {
                 setIsLoading(false);
             }
         };
         fetchData();
-    }, []);
+    }, [toast]);
 
     const handleQuarantine = async (workstationId: string) => {
         try {
@@ -118,18 +124,19 @@ export default function EndpointSecurityPage() {
             });
 
             if (!response.ok) {
-                throw new Error('Quarantine command failed');
+                const errorData = await response.json().catch(() => ({ message: 'Quarantine command failed' }));
+                throw new Error(errorData.details || errorData.message);
             }
             
             toast({
                 title: "Quarantine Action",
                 description: `Device ${workstationId} has been sent to quarantine.`,
             });
-        } catch (error) {
+        } catch (error: any) {
             console.error('Quarantine failed:', error);
              toast({
                 title: "Error",
-                description: `Failed to quarantine device ${workstationId}.`,
+                description: error.message || `Failed to quarantine device ${workstationId}.`,
                 variant: 'destructive',
             });
         }

@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Gauge, Users, XCircle, ArrowRight } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { NetworkTrafficData } from "@/lib/types";
+import { useToast } from "@/hooks/use-toast";
 
 function StatCard({ title, value, icon: Icon, isLoading }: { title: string, value?: string | number, icon: React.ElementType, isLoading: boolean }) {
     return (
@@ -82,6 +83,7 @@ function TrafficFlowMap({ isLoading }: { isLoading: boolean }) {
 export default function NetworkTrafficPage() {
     const [data, setData] = useState<NetworkTrafficData | null>(null);
     const [isLoading, setIsLoading] = useState(true);
+    const { toast } = useToast();
 
      useEffect(() => {
         const fetchData = async () => {
@@ -89,19 +91,25 @@ export default function NetworkTrafficPage() {
             try {
                 const response = await fetch('/api/network-traffic');
                 if (!response.ok) {
-                    throw new Error(`API call failed with status: ${response.status}`);
+                    const errorData = await response.json().catch(() => ({ message: 'An unknown API error occurred.' }));
+                    throw new Error(errorData.details || errorData.message || `API call failed with status: ${response.status}`);
                 }
                 const result = await response.json();
                 setData(result);
-            } catch (error) {
+            } catch (error: any) {
                 console.error("Failed to fetch network traffic data:", error);
+                toast({
+                    variant: "destructive",
+                    title: "Failed to Load Network Traffic Data",
+                    description: error.message,
+                });
                 setData(null);
             } finally {
                 setIsLoading(false);
             }
         };
         fetchData();
-    }, []);
+    }, [toast]);
 
     return (
         <div className="space-y-8">

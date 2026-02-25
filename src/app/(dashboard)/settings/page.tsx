@@ -13,6 +13,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import type { TeamUser } from "@/lib/types";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useToast } from "@/hooks/use-toast";
 
 function GeneralSettings() {
     return (
@@ -139,6 +140,7 @@ function MlBaselines() {
 function UserAccess() {
     const [users, setUsers] = useState<TeamUser[]>([]);
     const [isLoading, setIsLoading] = useState(true);
+    const { toast } = useToast();
 
     useEffect(() => {
         const fetchData = async () => {
@@ -146,19 +148,25 @@ function UserAccess() {
             try {
                 const response = await fetch('/api/users');
                  if (!response.ok) {
-                    throw new Error(`API call failed with status: ${response.status}`);
+                    const errorData = await response.json().catch(() => ({ message: 'An unknown API error occurred.' }));
+                    throw new Error(errorData.details || errorData.message || `API call failed with status: ${response.status}`);
                 }
                 const result = await response.json();
                 setUsers(result);
-            } catch (error) {
+            } catch (error: any) {
                 console.error("Failed to fetch users:", error);
+                toast({
+                    variant: "destructive",
+                    title: "Failed to Load User Data",
+                    description: error.message,
+                });
                 setUsers([]);
             } finally {
                 setIsLoading(false);
             }
         };
         fetchData();
-    }, []);
+    }, [toast]);
 
     return (
         <Card>

@@ -25,6 +25,7 @@ import { cn, getSeverityClassNames } from '@/lib/utils';
 import { Badge } from '../ui/badge';
 import type { RecentAlert, User as UserType, Application } from '@/lib/types';
 import { Skeleton } from '../ui/skeleton';
+import { useToast } from '@/hooks/use-toast';
 
 function AlertItem({ alert }: { alert: RecentAlert }) {
   const severityClasses = getSeverityClassNames(alert.severity);
@@ -54,6 +55,7 @@ type HeaderData = {
 export function DashboardHeader() {
   const [data, setData] = useState<HeaderData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const { toast } = useToast();
 
   useEffect(() => {
     async function fetchData() {
@@ -61,19 +63,25 @@ export function DashboardHeader() {
       try {
         const res = await fetch('/api/header-data');
          if (!res.ok) {
-            throw new Error(`API call failed with status: ${res.status}`);
+            const errorData = await res.json().catch(() => ({ message: 'An unknown API error occurred.' }));
+            throw new Error(errorData.details || errorData.message || `API call failed with status: ${res.status}`);
         }
         const result = await res.json();
         setData(result);
-      } catch (error) {
+      } catch (error: any) {
         console.error("Failed to fetch header data", error);
+        toast({
+            variant: "destructive",
+            title: "Failed to Load Header Data",
+            description: error.message,
+        });
         setData(null);
       } finally {
         setIsLoading(false);
       }
     }
     fetchData();
-  }, []);
+  }, [toast]);
 
   return (
     <header className="sticky top-0 z-30 hidden h-16 items-center gap-4 border-b bg-card px-4 md:flex md:px-6">

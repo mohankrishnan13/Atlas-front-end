@@ -58,18 +58,19 @@ function IncidentDetailSheet({ incident, open, onOpenChange }: { incident: Incid
                 body: JSON.stringify({ incidentId: incident.id, action: action }),
             });
             if (!response.ok) {
-                throw new Error('Remediation action failed');
+                const errorData = await response.json().catch(() => ({ message: 'Remediation action failed' }));
+                throw new Error(errorData.details || errorData.message);
             }
             toast({
                 title: `Action: ${action}`,
                 description: `Action taken for incident ${incident.id}`,
             });
             onOpenChange(false);
-        } catch(error) {
+        } catch(error: any) {
              console.error(`Remediation action '${action}' failed:`, error);
              toast({
                 title: "Error",
-                description: `Failed to perform action '${action}' for incident ${incident.id}.`,
+                description: error.message || `Failed to perform action '${action}' for incident ${incident.id}.`,
                 variant: 'destructive',
             });
         }
@@ -147,6 +148,7 @@ export default function IncidentsPage() {
     const [selectedIncident, setSelectedIncident] = useState<Incident | null>(null);
     const [incidents, setIncidents] = useState<Incident[]>([]);
     const [isLoading, setIsLoading] = useState(true);
+    const { toast } = useToast();
 
     useEffect(() => {
         const fetchData = async () => {
@@ -154,19 +156,25 @@ export default function IncidentsPage() {
             try {
                 const response = await fetch('/api/incidents');
                 if (!response.ok) {
-                    throw new Error(`API call failed with status: ${response.status}`);
+                    const errorData = await response.json().catch(() => ({ message: 'An unknown API error occurred.' }));
+                    throw new Error(errorData.details || errorData.message || `API call failed with status: ${response.status}`);
                 }
                 const result = await response.json();
                 setIncidents(result);
-            } catch (error) {
+            } catch (error: any) {
                 console.error("Failed to fetch incidents:", error);
+                 toast({
+                    variant: "destructive",
+                    title: "Failed to Load Incidents Data",
+                    description: error.message,
+                });
                 setIncidents([]);
             } finally {
                 setIsLoading(false);
             }
         };
         fetchData();
-    }, []);
+    }, [toast]);
 
     const filteredIncidents = incidents.filter(inc =>
         Object.values(inc).some(val =>

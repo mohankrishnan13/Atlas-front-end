@@ -14,6 +14,7 @@ import {
 import { Line, LineChart as RechartsLineChart, CartesianGrid, XAxis, YAxis, Tooltip as RechartsTooltip, ResponsiveContainer, Legend } from "recharts"
 import { Skeleton } from "@/components/ui/skeleton";
 import type { ApiMonitoringData } from "@/lib/types";
+import { useToast } from "@/hooks/use-toast";
 
 const chartConfig = {
   actual: {
@@ -43,6 +44,7 @@ function StatCard({ title, value, icon: Icon, isLoading }: { title: string, valu
 export default function ApiMonitoringPage() {
     const [data, setData] = useState<ApiMonitoringData | null>(null);
     const [isLoading, setIsLoading] = useState(true);
+    const { toast } = useToast();
 
     useEffect(() => {
         const fetchData = async () => {
@@ -50,19 +52,25 @@ export default function ApiMonitoringPage() {
             try {
                 const response = await fetch('/api/api-monitoring');
                 if (!response.ok) {
-                    throw new Error(`API call failed with status: ${response.status}`);
+                    const errorData = await response.json().catch(() => ({ message: 'An unknown API error occurred.' }));
+                    throw new Error(errorData.details || errorData.message || `API call failed with status: ${response.status}`);
                 }
                 const result = await response.json();
                 setData(result);
-            } catch (error) {
+            } catch (error: any) {
                 console.error("Failed to fetch API monitoring data:", error);
+                toast({
+                    variant: "destructive",
+                    title: "Failed to Load API Monitoring Data",
+                    description: error.message,
+                });
                 setData(null);
             } finally {
                 setIsLoading(false);
             }
         };
         fetchData();
-    }, []);
+    }, [toast]);
 
     return (
         <div className="space-y-8">

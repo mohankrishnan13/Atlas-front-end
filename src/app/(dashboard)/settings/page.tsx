@@ -1,249 +1,207 @@
-"use client";
+'use client';
 
-import React, { useState, useEffect } from "react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Slider } from "@/components/ui/slider";
-import { Switch } from "@/components/ui/switch";
-import { Button } from "@/components/ui/button";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import type { TeamUser } from "@/lib/types";
-import { Skeleton } from "@/components/ui/skeleton";
-import { useToast } from "@/hooks/use-toast";
-import { useEnvironment } from "@/context/EnvironmentContext";
+import React from 'react';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Switch } from '@/components/ui/switch';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { useToast } from '@/hooks/use-toast';
+import { Clock, Lock, Mail, Shield } from 'lucide-react';
+import placeholderData from '@/lib/placeholder-images.json';
 
-function GeneralSettings() {
-    return (
-        <Card>
-            <CardHeader>
-                <CardTitle>General Settings</CardTitle>
-                <CardDescription>Update your system's general information.</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-                <div className="space-y-2">
-                    <Label htmlFor="system-name">System Name</Label>
-                    <Input id="system-name" defaultValue="ATLAS Production" />
-                </div>
-                <div className="space-y-2">
-                    <Label htmlFor="timezone">Timezone</Label>
-                    <Select defaultValue="utc">
-                        <SelectTrigger id="timezone"><SelectValue /></SelectTrigger>
-                        <SelectContent>
-                            <SelectItem value="utc">UTC</SelectItem>
-                            <SelectItem value="est">EST</SelectItem>
-                            <SelectItem value="pst">PST</SelectItem>
-                        </SelectContent>
-                    </Select>
-                </div>
-                <div className="space-y-2">
-                    <Label htmlFor="retention">Data Retention Period</Label>
-                     <Select defaultValue="90">
-                        <SelectTrigger id="retention"><SelectValue /></SelectTrigger>
-                        <SelectContent>
-                            <SelectItem value="30">30 Days</SelectItem>
-                            <SelectItem value="90">90 Days</SelectItem>
-                            <SelectItem value="180">180 Days</SelectItem>
-                            <SelectItem value="365">365 Days</SelectItem>
-                        </SelectContent>
-                    </Select>
-                </div>
-            </CardContent>
-        </Card>
-    );
-}
+const recentActivity = [
+  {
+    dateTime: 'May 22, 2024, 9:01 AM',
+    ip: '203.0.113.54',
+    location: 'New York, USA',
+    status: 'Success - Chrome on Windows 11',
+  },
+  {
+    dateTime: 'May 21, 2024, 2:30 PM',
+    ip: '198.51.100.2',
+    location: 'London, UK',
+    status: 'Success - Safari on macOS',
+  },
+  {
+    dateTime: 'May 20, 2024, 11:15 AM',
+    ip: '203.0.113.55',
+    location: 'New York, USA',
+    status: 'Failed - Invalid Password',
+  },
+];
 
-function AlertTuning() {
-    return (
-        <Card>
-             <CardHeader>
-                <CardTitle>Alert Tuning</CardTitle>
-                <CardDescription>Adjust thresholds for alert severity.</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-8">
-                 <div className="space-y-3">
-                    <Label>Critical Threshold</Label>
-                    <div className="flex items-center gap-4">
-                       <Slider defaultValue={[80]} max={100} step={1} />
-                       <span className="font-mono text-lg w-16 text-right">80%</span>
-                    </div>
-                </div>
-                 <div className="space-y-3">
-                    <Label>Warning Threshold</Label>
-                     <div className="flex items-center gap-4">
-                       <Slider defaultValue={[60]} max={100} step={1} />
-                       <span className="font-mono text-lg w-16 text-right">60%</span>
-                    </div>
-                </div>
-            </CardContent>
-        </Card>
-    )
-}
-
-function ProgressiveContainment() {
-    return (
-        <Card>
-            <CardHeader>
-                <CardTitle>Progressive Containment Rules</CardTitle>
-                <CardDescription>Configure automated responses to anomalies.</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-8">
-                <div className="space-y-3">
-                    <Label>Soft Rate Limit Threshold (Calls/min)</Label>
-                    <div className="flex items-center gap-4">
-                       <Slider defaultValue={[100]} max={1000} step={10} />
-                       <span className="font-mono text-lg w-24 text-right">100</span>
-                    </div>
-                </div>
-                <div className="space-y-3">
-                    <Label>Hard Block Threshold (Calls/min)</Label>
-                    <div className="flex items-center gap-4">
-                       <Slider defaultValue={[500]} max={2000} step={10} />
-                       <span className="font-mono text-lg w-24 text-right">500</span>
-                    </div>
-                </div>
-                 <div className="space-y-3">
-                    <Label>Anomaly Accumulation Window (Days)</Label>
-                    <div className="flex items-center gap-4">
-                       <Slider defaultValue={[7]} max={30} step={1} />
-                       <span className="font-mono text-lg w-24 text-right">7</span>
-                    </div>
-                </div>
-                <div className="space-y-4 pt-4 border-t border-border">
-                    <div className="flex items-center justify-between"><Label>Auto-dismiss low severity alerts</Label><Switch /></div>
-                    <div className="flex items-center justify-between"><Label>Enable ML Baseline for new services</Label><Switch defaultChecked /></div>
-                    <div className="flex items-center justify-between"><Label>Auto-quarantine on critical malware detection</Label><Switch defaultChecked /></div>
-                </div>
-            </CardContent>
-        </Card>
-    );
-}
-
-function MlBaselines() {
-    return (
-        <Card>
-             <CardHeader>
-                <CardTitle>ML Baselines</CardTitle>
-                <CardDescription>Manage machine learning models for anomaly detection.</CardDescription>
-            </CardHeader>
-            <CardContent>
-                <div className="text-center text-muted-foreground py-12">
-                    <p>ML Baseline management is not yet implemented.</p>
-                </div>
-            </CardContent>
-        </Card>
-    )
-}
-
-function UserAccess() {
-    const [users, setUsers] = useState<TeamUser[]>([]);
-    const [isLoading, setIsLoading] = useState(true);
-    const { toast } = useToast();
-    const { environment } = useEnvironment();
-
-    useEffect(() => {
-        const fetchData = async () => {
-            setIsLoading(true);
-            try {
-                const response = await fetch(`/api/users?env=${environment}`);
-                 if (!response.ok) {
-                    const errorData = await response.json().catch(() => ({ message: 'An unknown API error occurred.' }));
-                    throw new Error(errorData.details || errorData.message || `API call failed with status: ${response.status}`);
-                }
-                const result = await response.json();
-                setUsers(result);
-            } catch (error: any) {
-                console.error("Failed to fetch users:", error);
-                toast({
-                    variant: "destructive",
-                    title: "Failed to Load User Data",
-                    description: error.message,
-                });
-                setUsers([]);
-            } finally {
-                setIsLoading(false);
-            }
-        };
-        fetchData();
-    }, [toast, environment]);
-
-    return (
-        <Card>
-            <CardHeader>
-                <CardTitle>User Access</CardTitle>
-                <CardDescription>Manage user permissions and access.</CardDescription>
-            </CardHeader>
-            <CardContent>
-                <Table>
-                    <TableHeader>
-                        <TableRow>
-                            <TableHead>User</TableHead>
-                            <TableHead>Role</TableHead>
-                            <TableHead className="text-right">Actions</TableHead>
-                        </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                        {isLoading && Array.from({length: 3}).map((_, i) => (
-                            <TableRow key={i}>
-                                <TableCell colSpan={3}><Skeleton className="h-10 w-full" /></TableCell>
-                            </TableRow>
-                        ))}
-                        {!isLoading && users.map(u => (
-                            <TableRow key={u.id}>
-                                <TableCell>
-                                    <div className="flex items-center gap-3">
-                                        <Avatar className="h-9 w-9">
-                                            <AvatarImage src={u.avatar} alt={u.name} data-ai-hint="person face" />
-                                            <AvatarFallback>{u.name.charAt(0)}</AvatarFallback>
-                                        </Avatar>
-                                        <div>
-                                            <p className="font-medium">{u.name}</p>
-                                            <p className="text-sm text-muted-foreground">{u.email}</p>
-                                        </div>
-                                    </div>
-                                </TableCell>
-                                <TableCell>{u.role}</TableCell>
-                                <TableCell className="text-right space-x-2">
-                                    <Button variant="outline" size="sm">Edit Permissions</Button>
-                                    <Button variant="destructive" size="sm">Revoke Access</Button>
-                                </TableCell>
-                            </TableRow>
-                        ))}
-                        {!isLoading && users.length === 0 && (
-                            <TableRow>
-                                <TableCell colSpan={3} className="text-center text-muted-foreground">No users found.</TableCell>
-                            </TableRow>
-                        )}
-                    </TableBody>
-                </Table>
-            </CardContent>
-        </Card>
-    )
-}
 
 export default function SettingsPage() {
-  return (
-    <div className="space-y-8">
-      <h1 className="text-3xl font-bold">Settings</h1>
-      <Tabs defaultValue="general" className="flex flex-col md:flex-row gap-8">
-        <TabsList className="flex-col h-auto justify-start p-2 gap-1 items-stretch md:w-48">
-          <TabsTrigger value="general" className="justify-start">General</TabsTrigger>
-          <TabsTrigger value="alerts" className="justify-start">Alert Tuning</TabsTrigger>
-          <TabsTrigger value="containment" className="justify-start">Progressive Containment</TabsTrigger>
-          <TabsTrigger value="ml" className="justify-start">ML Baselines</TabsTrigger>
-          <TabsTrigger value="users" className="justify-start">User Access</TabsTrigger>
-        </TabsList>
-        <div className="flex-1">
-             <TabsContent value="general"><GeneralSettings /></TabsContent>
-             <TabsContent value="alerts"><AlertTuning /></TabsContent>
-             <TabsContent value="containment"><ProgressiveContainment /></TabsContent>
-             <TabsContent value="ml"><MlBaselines /></TabsContent>
-             <TabsContent value="users"><UserAccess /></TabsContent>
+    const { toast } = useToast();
+
+    const handleSaveChanges = () => {
+        toast({
+            title: 'Settings Saved',
+            description: 'Your personal information has been updated.',
+        });
+    };
+
+     const handleUpdatePassword = () => {
+        toast({
+            title: 'Security Updated',
+            description: 'Your password has been successfully changed.',
+        });
+    };
+
+    return (
+        <div className="space-y-8">
+            {/* Header Section */}
+            <div className="flex items-center gap-6">
+                <Avatar className="h-24 w-24 border-2 border-slate-800">
+                    <AvatarImage src={placeholderData.placeholderImages[0].imageUrl} alt="Jane Doe" data-ai-hint="person face" />
+                    <AvatarFallback>JD</AvatarFallback>
+                </Avatar>
+                <div>
+                    <h1 className="text-3xl font-bold">Jane Doe</h1>
+                    <p className="text-muted-foreground">Senior SOC Analyst</p>
+                    <p className="text-sm text-muted-foreground">jane.doe@atlas-sec.com</p>
+                </div>
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
+                <div className="space-y-8">
+                    {/* Personal Information Card */}
+                    <Card>
+                        <CardHeader>
+                            <CardTitle>Personal Information</CardTitle>
+                            <CardDescription>Update your personal details.</CardDescription>
+                        </CardHeader>
+                        <CardContent className="space-y-4">
+                            <div className="grid grid-cols-2 gap-4">
+                                <div className="space-y-2">
+                                    <Label htmlFor="first-name">First Name</Label>
+                                    <Input id="first-name" defaultValue="Jane" />
+                                </div>
+                                <div className="space-y-2">
+                                    <Label htmlFor="last-name">Last Name</Label>
+                                    <Input id="last-name" defaultValue="Doe" />
+                                </div>
+                            </div>
+                            <div className="space-y-2">
+                                <Label htmlFor="email">Email Address</Label>
+                                <Input id="email" type="email" defaultValue="jane.doe@atlas-sec.com" />
+                            </div>
+                            <div className="space-y-2">
+                                <Label htmlFor="phone">Phone Number</Label>
+                                <Input id="phone" type="tel" defaultValue="+1 (555) 123-4567" />
+                            </div>
+                            <Button onClick={handleSaveChanges} className="bg-blue-600 hover:bg-blue-700">Save Changes</Button>
+                        </CardContent>
+                    </Card>
+
+                    {/* Account Preferences Card */}
+                    <Card>
+                        <CardHeader>
+                            <CardTitle>Account Preferences</CardTitle>
+                            <CardDescription>Set your notification and timezone settings.</CardDescription>
+                        </CardHeader>
+                        <CardContent className="space-y-6">
+                             <div className="space-y-2">
+                                <Label htmlFor="timezone">Timezone</Label>
+                                <Select defaultValue="utc">
+                                    <SelectTrigger id="timezone">
+                                        <SelectValue />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="utc">UTC (Coordinated Universal Time)</SelectItem>
+                                        <SelectItem value="est">EST (Eastern Standard Time)</SelectItem>
+                                        <SelectItem value="pst">PST (Pacific Standard Time)</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                            <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
+                                <div>
+                                    <h4 className="font-semibold flex items-center gap-2"><Mail className="h-4 w-4" />Daily Threat Summaries</h4>
+                                    <p className="text-xs text-muted-foreground">Receive a summary of system activity every 24 hours.</p>
+                                </div>
+                                <Switch defaultChecked />
+                            </div>
+                            <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
+                                <div>
+                                    <h4 className="font-semibold flex items-center gap-2"><Shield className="h-4 w-4" />Critical Alert Notifications</h4>
+                                    <p className="text-xs text-muted-foreground">Get notified immediately for critical-severity incidents.</p>
+                                </div>
+                                <Switch defaultChecked />
+                            </div>
+                        </CardContent>
+                    </Card>
+
+                </div>
+
+                <div className="space-y-8">
+                    {/* Security & Authentication Card */}
+                    <Card>
+                        <CardHeader>
+                            <CardTitle>Security & Authentication</CardTitle>
+                            <CardDescription>Manage your password and two-factor authentication.</CardDescription>
+                        </CardHeader>
+                        <CardContent className="space-y-6">
+                            <div className="space-y-4 p-4 border border-slate-800 rounded-md">
+                                <h4 className="font-semibold flex items-center gap-2"><Lock className="h-4 w-4" />Change Password</h4>
+                                <div className="space-y-2">
+                                    <Label htmlFor="current-password">Current Password</Label>
+                                    <Input id="current-password" type="password" placeholder="••••••••" />
+                                </div>
+                                <div className="space-y-2">
+                                    <Label htmlFor="new-password">New Password</Label>
+                                    <Input id="new-password" type="password" placeholder="••••••••" />
+                                </div>
+                                 <div className="space-y-2">
+                                    <Label htmlFor="confirm-password">Confirm New Password</Label>
+                                    <Input id="confirm-password" type="password" placeholder="••••••••" />
+                                </div>
+                                <Button onClick={handleUpdatePassword} variant="secondary">Update Password</Button>
+                            </div>
+                            <div className="flex items-center justify-between p-4 border border-slate-800 rounded-md">
+                                <div>
+                                    <h4 className="font-semibold">Two-Factor Authentication (2FA)</h4>
+                                    <p className="text-sm text-muted-foreground">Recommended for all SOC environments.</p>
+                                </div>
+                                <Switch />
+                            </div>
+                        </CardContent>
+                    </Card>
+
+                     {/* Recent Account Activity Card */}
+                    <Card>
+                        <CardHeader>
+                            <CardTitle className="flex items-center gap-2"><Clock className="h-5 w-5" /> Recent Account Activity</CardTitle>
+                            <CardDescription>A log of recent sign-in attempts to your account.</CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                            <Table>
+                                <TableHeader>
+                                    <TableRow>
+                                        <TableHead>Date/Time</TableHead>
+                                        <TableHead>IP Address</TableHead>
+                                        <TableHead>Location</TableHead>
+                                        <TableHead>Status</TableHead>
+                                    </TableRow>
+                                </TableHeader>
+                                <TableBody>
+                                    {recentActivity.map((activity, index) => (
+                                        <TableRow key={index}>
+                                            <TableCell className="text-xs">{activity.dateTime}</TableCell>
+                                            <TableCell className="font-mono text-xs">{activity.ip}</TableCell>
+                                            <TableCell className="text-xs">{activity.location}</TableCell>
+                                            <TableCell className="text-xs">{activity.status}</TableCell>
+                                        </TableRow>
+                                    ))}
+                                </TableBody>
+                            </Table>
+                        </CardContent>
+                    </Card>
+                </div>
+            </div>
         </div>
-      </Tabs>
-    </div>
-  );
+    );
 }

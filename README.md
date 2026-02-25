@@ -41,10 +41,6 @@ The project follows a feature-oriented structure within the Next.js App Router p
 │   │   └── layout.tsx      # Shared layout for the dashboard
 │   ├── (auth)              # Authentication pages (Login, Signup, etc.)
 │   │   └── layout.tsx      # Shared layout for auth cards
-│   ├── api                 # **API Proxy Routes** (Connects frontend to your backend)
-│   │   ├── overview
-│   │   │   └── route.ts
-│   │   └── ...
 │   ├── globals.css         # Global styles & Tailwind theme
 │   └── layout.tsx          # Root application layout
 │
@@ -61,6 +57,7 @@ The project follows a feature-oriented structure within the Next.js App Router p
 │   └── EnvironmentContext.tsx # Manages "Cloud" vs "Local" state
 │
 ├── lib
+│   ├── api.ts              # Global fetch interceptor for backend requests
 │   ├── types.ts            # TypeScript type definitions for all data structures
 │   ├── utils.ts            # Utility functions
 │   └── placeholder-images.json # Manages placeholder image data
@@ -86,53 +83,54 @@ The project follows a feature-oriented structure within the Next.js App Router p
 
 ## Connecting to Your Backend
 
-This frontend is designed to be backend-agnostic. It uses a **proxy pattern** through Next.js API Routes to communicate with your backend. This prevents CORS issues and securely hides your backend URL from the client-side code.
+This frontend connects directly to your backend API. It uses a custom `fetch` interceptor located at `src/lib/api.ts` to automatically manage authentication and base URLs for all requests.
 
 ### Step 1: Configure Your Backend URL
 
-The most important step is to tell the frontend where your backend is located.
+You must tell the frontend where your backend is located.
 
 1.  Open the `.env` file in the root of the project.
-2.  Set the `ATLAS_BACKEND_URL` variable to the URL of your running backend server.
+2.  Set the `NEXT_PUBLIC_ATLAS_BACKEND_URL` variable to the full URL of your running backend server.
 
     ```
-    ATLAS_BACKEND_URL=http://localhost:8000
+    NEXT_PUBLIC_ATLAS_BACKEND_URL=http://localhost:8000
     ```
 
-### Step 2: Review the API Proxy Routes
+### Step 2: Enable CORS on Your Backend
 
-The frontend components **do not** fetch data directly from your backend. Instead, they make requests to local API routes located in `src/app/api/`. These routes are responsible for forwarding the request to your actual backend.
+Because the frontend application (running on `localhost:9002`) makes direct calls to your backend server (e.g., `localhost:8000`), your backend **must** be configured to accept requests from the frontend's origin.
 
-**Example: The Overview Page**
+You need to enable Cross-Origin Resource Sharing (CORS) on your backend. Specifically, ensure your server's response headers include:
 
--   The page component `src/app/(dashboard)/overview/page.tsx` makes a `fetch` call to `/api/overview`.
--   The API route `src/app/api/overview/route.ts` receives this request.
--   This route then makes a server-to-server request to `{ATLAS_BACKEND_URL}/overview`.
--   It forwards the response (or an error) back to the frontend component.
-
-```typescript
-// src/app/api/overview/route.ts
-
-import {NextResponse} from 'next/server';
-
-export async function GET(request: Request) {
-  const {searchParams} = new URL(request.url);
-  const env = searchParams.get('env') || 'cloud';
-
-  const backendUrl = `${process.env.ATLAS_BACKEND_URL}/overview?env=${env}`;
-
-  try {
-    const response = await fetch(backendUrl);
-    // ... forward response
-  } catch (error) {
-    // ... handle connection error
-  }
-}
+```
+Access-Control-Allow-Origin: http://localhost:9002
+Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS
+Access-Control-Allow-Headers: Content-Type, Authorization
 ```
 
-If your backend has different endpoint paths (e.g., `/api/v1/dashboard-overview` instead of `/overview`), you will need to **update the `backendUrl` variable** in the corresponding route file within `src/app/api/`.
+### Step 3: How the `apiFetch` Interceptor Works
 
-### Step 3: Match Data Structures
+The file `src/lib/api.ts` exports a function called `apiFetch`. This function is used for all data fetching in the dashboard pages. It automatically performs the following actions:
+
+1.  **Reads the Backend URL**: It reads the `NEXT_PUBLIC_ATLAS_BACKEND_URL` from your `.env` file.
+2.  **Attaches Auth Token**: It retrieves an authentication token from `localStorage` (under the key `atlas_auth_token`) and automatically adds it to the `Authorization: Bearer <token>` header for every request.
+3.  **Handles Session Expiry**: If the backend responds with a `401 Unauthorized` status, the interceptor will automatically clear the local token and redirect the user to the `/login` page.
+
+When you need to make a request in a component, you simply use `apiFetch` instead of the standard `fetch`:
+
+```typescript
+// src/app/(dashboard)/overview/page.tsx
+import { apiFetch } from '@/lib/api';
+
+// ... inside your component's useEffect
+const response = await apiFetch('/overview'); // This calls http://localhost:8000/overview
+const data = await response.json();
+// ...
+```
+
+If your backend has different endpoint paths (e.g., `/api/v1/dashboard-overview` instead of `/overview`), you will need to **update the path** passed to the `apiFetch` function in the corresponding page file.
+
+### Step 4: Match Data Structures
 
 The frontend expects data to be in a specific format, which is defined by TypeScript types in `src/lib/types.ts`.
 
@@ -149,41 +147,7 @@ export type Incident = {
 };
 ```
 
-If your backend returns incident data with different property names (e.g., `incident_id` instead of `id`), you have two options:
-
-1.  **(Recommended)** Update the types in `src/lib/types.ts` to match your backend's data structure.
-2.  **(Alternative)** Transform the data within the API proxy route (`src/app/api/...`) before sending it to the frontend.
-
-### Step 4: Authentication for POST/PUT Requests
-
-For actions that modify data (like quarantining a device or remediating an incident), you will need to pass an authentication token. This logic should be added to the relevant API proxy route.
-
-**Example (Conceptual):**
-
-```typescript
-// src/app/api/incidents/remediate/route.ts
-
-// import { cookies } from 'next/headers'; // Example for getting a cookie
-
-export async function POST(request: Request) {
-  // 1. Get the auth token (from a cookie, for example)
-  // const token = cookies().get('auth_token')?.value;
-
-  const backendUrl = `${process.env.ATLAS_BACKEND_URL}/incidents/remediate`;
-
-  const response = await fetch(backendUrl, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      // 2. Add the Authorization header
-      // 'Authorization': `Bearer ${token}`,
-    },
-    body: JSON.stringify(await request.json()),
-  });
-
-  // ...
-}
-```
+Ensure your backend endpoints return data that matches these type definitions.
 
 ---
 

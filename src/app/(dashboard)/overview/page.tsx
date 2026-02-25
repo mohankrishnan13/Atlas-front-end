@@ -8,7 +8,7 @@ import { Bug, LineChart, Server, Waves, LoaderCircle } from "lucide-react";
 import { cn, getSeverityClassNames } from "@/lib/utils";
 import type { Severity, OverviewData, Microservice, SystemAnomaly, TimeSeriesData, AppAnomaly } from "@/lib/types";
 import { useEnvironment } from "@/context/EnvironmentContext";
-
+import { apiFetch } from "@/lib/api";
 import { generateDailyThreatBriefing } from "@/ai/flows/ai-daily-threat-briefing-flow";
 
 import {
@@ -256,7 +256,7 @@ export default function OverviewPage() {
         const fetchData = async () => {
             setIsLoading(true);
             try {
-                const response = await fetch(`/api/overview?env=${environment}`);
+                const response = await apiFetch(`/overview?env=${environment}`);
                 if (!response.ok) {
                     const errorData = await response.json().catch(() => ({ message: 'An unknown API error occurred.' }));
                     throw new Error(errorData.details || errorData.message || `API call failed with status: ${response.status}`);

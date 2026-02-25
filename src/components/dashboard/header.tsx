@@ -40,6 +40,7 @@ import type { RecentAlert, User as UserType, Application } from '@/lib/types';
 import { Skeleton } from '../ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
 import { useEnvironment } from '@/context/EnvironmentContext';
+import { apiFetch } from '@/lib/api';
 
 function AlertItem({ alert }: { alert: RecentAlert }) {
   const severityClasses = getSeverityClassNames(alert.severity);
@@ -82,7 +83,7 @@ export function DashboardHeader() {
     async function fetchData() {
       setIsLoading(true);
       try {
-        const res = await fetch(`/api/header-data?env=${environment}`);
+        const res = await apiFetch(`/header-data?env=${environment}`);
         if (!res.ok) {
           const errorData = await res
             .json()
@@ -112,6 +113,9 @@ export function DashboardHeader() {
 
   const handleLogout = () => {
     // In a real app, you would also clear auth tokens here
+    if (typeof window !== 'undefined') {
+        localStorage.removeItem('atlas_auth_token');
+    }
     router.push('/login');
   };
 

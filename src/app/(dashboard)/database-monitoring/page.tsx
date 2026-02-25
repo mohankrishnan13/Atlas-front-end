@@ -15,6 +15,7 @@ import {
 import { Area, AreaChart, CartesianGrid, XAxis, YAxis, Tooltip as RechartsTooltip, ResponsiveContainer, Legend } from "recharts"
 import { useToast } from "@/hooks/use-toast";
 import { useEnvironment } from "@/context/EnvironmentContext";
+import { apiFetch } from "@/lib/api";
 
 const chartConfig = {
   SELECT: { label: "SELECT", color: "hsl(var(--chart-1))" },
@@ -51,7 +52,7 @@ export default function DatabaseMonitoringPage() {
         const fetchData = async () => {
             setIsLoading(true);
             try {
-                const response = await fetch(`/api/db-monitoring?env=${environment}`);
+                const response = await apiFetch(`/db-monitoring?env=${environment}`);
                  if (!response.ok) {
                     const errorData = await response.json().catch(() => ({ message: 'An unknown API error occurred.' }));
                     throw new Error(errorData.details || errorData.message || `API call failed with status: ${response.status}`);

@@ -14,6 +14,7 @@ import { aiInvestigatorSummary, AiInvestigatorSummaryOutput, AiInvestigatorSumma
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useEnvironment } from '@/context/EnvironmentContext';
+import { apiFetch } from '@/lib/api';
 
 
 function IncidentDetailSheet({ incident, open, onOpenChange }: { incident: Incident | null, open: boolean, onOpenChange: (open: boolean) => void }) {
@@ -53,7 +54,7 @@ function IncidentDetailSheet({ incident, open, onOpenChange }: { incident: Incid
     const handleRemediation = async (action: string) => {
         if (!incident) return;
         try {
-            const response = await fetch('/api/incidents/remediate', {
+            const response = await apiFetch('/incidents/remediate', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ incidentId: incident.id, action: action }),
@@ -156,7 +157,7 @@ export default function IncidentsPage() {
         const fetchData = async () => {
             setIsLoading(true);
             try {
-                const response = await fetch(`/api/incidents?env=${environment}`);
+                const response = await apiFetch(`/incidents?env=${environment}`);
                 if (!response.ok) {
                     const errorData = await response.json().catch(() => ({ message: 'An unknown API error occurred.' }));
                     throw new Error(errorData.details || errorData.message || `API call failed with status: ${response.status}`);

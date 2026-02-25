@@ -16,6 +16,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import type { ApiMonitoringData } from "@/lib/types";
 import { useToast } from "@/hooks/use-toast";
 import { useEnvironment } from "@/context/EnvironmentContext";
+import { apiFetch } from "@/lib/api";
 
 const chartConfig = {
   actual: {
@@ -52,7 +53,7 @@ export default function ApiMonitoringPage() {
         const fetchData = async () => {
             setIsLoading(true);
             try {
-                const response = await fetch(`/api/api-monitoring?env=${environment}`);
+                const response = await apiFetch(`/api-monitoring?env=${environment}`);
                 if (!response.ok) {
                     const errorData = await response.json().catch(() => ({ message: 'An unknown API error occurred.' }));
                     throw new Error(errorData.details || errorData.message || `API call failed with status: ${response.status}`);

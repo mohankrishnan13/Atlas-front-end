@@ -18,6 +18,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useEnvironment } from '@/context/EnvironmentContext';
+import { apiFetch } from '@/lib/api';
 
 function StatCard({ title, value, icon: Icon, isLoading }: { title: string, value?: string | number, icon: React.ElementType, isLoading: boolean }) {
     return (
@@ -95,7 +96,7 @@ export default function EndpointSecurityPage() {
         const fetchData = async () => {
             setIsLoading(true);
             try {
-                const response = await fetch(`/api/endpoint-security?env=${environment}`);
+                const response = await apiFetch(`/endpoint-security?env=${environment}`);
                 if (!response.ok) {
                     const errorData = await response.json().catch(() => ({ message: 'An unknown API error occurred.' }));
                     throw new Error(errorData.details || errorData.message || `API call failed with status: ${response.status}`);
@@ -119,7 +120,7 @@ export default function EndpointSecurityPage() {
 
     const handleQuarantine = async (workstationId: string) => {
         try {
-            const response = await fetch('/api/endpoint-security/quarantine', {
+            const response = await apiFetch('/endpoint-security/quarantine', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ workstationId }),

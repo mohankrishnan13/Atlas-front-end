@@ -10,6 +10,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import type { NetworkTrafficData } from "@/lib/types";
 import { useToast } from "@/hooks/use-toast";
 import { useEnvironment } from "@/context/EnvironmentContext";
+import { apiFetch } from "@/lib/api";
 
 function StatCard({ title, value, icon: Icon, isLoading }: { title: string, value?: string | number, icon: React.ElementType, isLoading: boolean }) {
     return (
@@ -92,7 +93,7 @@ export default function NetworkTrafficPage() {
         const fetchData = async () => {
             setIsLoading(true);
             try {
-                const response = await fetch(`/api/network-traffic?env=${environment}`);
+                const response = await apiFetch(`/network-traffic?env=${environment}`);
                 if (!response.ok) {
                     const errorData = await response.json().catch(() => ({ message: 'An unknown API error occurred.' }));
                     throw new Error(errorData.details || errorData.message || `API call failed with status: ${response.status}`);

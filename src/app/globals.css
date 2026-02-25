@@ -4,13 +4,13 @@
 
 @layer base {
   :root {
-    --background: 222 47% 11%; /* slate-900 */
+    --background: 224 71% 4%; /* slate-950 */
     --foreground: 210 40% 98%;
 
-    --card: 222 33% 17%; /* slate-800 */
+    --card: 222 47% 11%; /* slate-900 */
     --card-foreground: 210 40% 98%;
 
-    --popover: 222 33% 17%;
+    --popover: 222 47% 11%;
     --popover-foreground: 210 40% 98%;
 
     --primary: 217.2 91.2% 59.8%; /* blue-500 */
@@ -51,11 +51,11 @@
   }
 
   .dark {
-    --background: 222 47% 11%;
+    --background: 224 71% 4%;
     --foreground: 210 40% 98%;
-    --card: 222 33% 17%;
+    --card: 222 47% 11%;
     --card-foreground: 210 40% 98%;
-    --popover: 222 33% 17%;
+    --popover: 222 47% 11%;
     --popover-foreground: 210 40% 98%;
     --primary: 217.2 91.2% 59.8%;
     --primary-foreground: 210 40% 98%;

@@ -31,8 +31,9 @@ export async function POST(request: Request) {
     return NextResponse.json(data);
   } catch (error: any) {
     console.error(`Failed to proxy POST request to ${backendUrl}:`, error);
+    const details = `Could not connect to the backend service at ${backendUrl}. Please ensure the backend server is running and accessible. Details: ${error.message}`;
     return new NextResponse(
-      JSON.stringify({ message: 'Failed to send quarantine command.', details: error.message }),
+      JSON.stringify({ message: 'Failed to send quarantine command.', details }),
       { status: 502, headers: { 'Content-Type': 'application/json' } }
     );
   }

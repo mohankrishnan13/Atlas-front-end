@@ -25,8 +25,9 @@ export async function GET() {
   } catch (error: any) {
     console.error(`Failed to proxy request to ${backendUrl}:`, error);
     // Return a 502 Bad Gateway error if the proxy fails
+    const details = `Could not connect to the backend service at ${backendUrl}. Please ensure the backend server is running and accessible from the application. Details: ${error.message}`;
     return new NextResponse(
-      JSON.stringify({ message: 'Failed to fetch data from backend.', details: error.message }),
+      JSON.stringify({ message: 'Failed to fetch data from backend.', details }),
       { status: 502, headers: { 'Content-Type': 'application/json' } }
     );
   }

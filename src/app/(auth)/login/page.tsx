@@ -10,7 +10,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { AuthCard } from '@/components/auth/auth-card';
-import { LoaderCircle } from 'lucide-react';
+import { LoaderCircle, AlertCircle } from 'lucide-react';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 
 const loginSchema = z.object({
   email: z.string().email({ message: 'Please enter a valid email address.' }),
@@ -22,6 +23,7 @@ type LoginFormValues = z.infer<typeof loginSchema>;
 export default function LoginPage() {
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
+  const [apiError, setApiError] = useState<string | null>(null);
 
   const form = useForm<LoginFormValues>({
     resolver: zodResolver(loginSchema),
@@ -33,11 +35,32 @@ export default function LoginPage() {
 
   const onSubmit = async (data: LoginFormValues) => {
     setIsLoading(true);
-    // Mock API call
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    console.log(data);
-    setIsLoading(false);
-    router.push('/overview');
+    setApiError(null);
+    try {
+        const response = await fetch(`${process.env.NEXT_PUBLIC_ATLAS_BACKEND_URL}/api/auth/login`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data),
+        });
+
+        if (response.ok) {
+            const result = await response.json();
+            if (typeof window !== 'undefined') {
+                localStorage.setItem('atlas_auth_token', result.access_token);
+            }
+            router.push('/overview');
+        } else if (response.status === 401) {
+            setApiError('Invalid credentials. Please try again.');
+        } else {
+            const errorResult = await response.json().catch(() => ({ detail: 'An unknown error occurred.' }));
+            setApiError(errorResult.detail || 'An unknown error occurred.');
+        }
+    } catch (error) {
+        console.error("Login API error:", error);
+        setApiError('Could not connect to the server. Please try again later.');
+    } finally {
+        setIsLoading(false);
+    }
   };
 
   return (
@@ -47,6 +70,14 @@ export default function LoginPage() {
     >
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+           {apiError && (
+            <Alert variant="destructive">
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription>
+                {apiError}
+              </AlertDescription>
+            </Alert>
+          )}
           <FormField
             control={form.control}
             name="email"

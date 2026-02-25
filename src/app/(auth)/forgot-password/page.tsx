@@ -33,15 +33,24 @@ export default function ForgotPasswordPage() {
 
   const onSubmit = async (data: ForgotPasswordFormValues) => {
     setIsLoading(true);
-    // Mock API call
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    console.log(data);
-    setIsLoading(false);
-    toast({
-        title: "Password Reset Link Sent",
-        description: "If an account exists with that email, a reset link has been sent.",
-    });
-    router.push('/login');
+    try {
+        const response = await fetch(`${process.env.NEXT_PUBLIC_ATLAS_BACKEND_URL}/api/auth/forgot-password`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email: data.email }),
+        });
+        // We always show a generic message to prevent email enumeration
+    } catch (error) {
+        console.error("Forgot password error:", error);
+        // Still show a generic message on network error
+    } finally {
+        setIsLoading(false);
+        toast({
+            title: "Password Reset Link Sent",
+            description: "If an account exists with that email, a reset link has been sent.",
+        });
+        router.push('/login');
+    }
   };
 
   return (

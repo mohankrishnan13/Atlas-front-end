@@ -1,207 +1,204 @@
 'use client';
 
-import React from 'react';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Button } from '@/components/ui/button';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Switch } from '@/components/ui/switch';
+import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
-import { Clock, Lock, Mail, Shield } from 'lucide-react';
-import placeholderData from '@/lib/placeholder-images.json';
+import { PlusCircle, Trash2 } from 'lucide-react';
+import type { TeamUser } from '@/lib/types';
+import { useEnvironment } from '@/context/EnvironmentContext';
+import { Skeleton } from '@/components/ui/skeleton';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 
-const recentActivity = [
-  {
-    dateTime: 'May 22, 2024, 9:01 AM',
-    ip: '203.0.113.54',
-    location: 'New York, USA',
-    status: 'Success - Chrome on Windows 11',
-  },
-  {
-    dateTime: 'May 21, 2024, 2:30 PM',
-    ip: '198.51.100.2',
-    location: 'London, UK',
-    status: 'Success - Safari on macOS',
-  },
-  {
-    dateTime: 'May 20, 2024, 11:15 AM',
-    ip: '203.0.113.55',
-    location: 'New York, USA',
-    status: 'Failed - Invalid Password',
-  },
-];
+function InviteUserDialog() {
+    const { toast } = useToast();
+
+    const handleInvite = () => {
+        toast({
+            title: "Invitation Sent",
+            description: "The user has been invited to join the team.",
+        });
+    }
+
+    return (
+        <Dialog>
+            <DialogTrigger asChild>
+                <Button>
+                    <PlusCircle className="mr-2 h-4 w-4" />
+                    Invite New User
+                </Button>
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-[425px]">
+                <DialogHeader>
+                    <DialogTitle>Invite New User</DialogTitle>
+                    <DialogDescription>
+                        Enter the email address of the user you want to invite. They will receive an email with instructions to join.
+                    </DialogDescription>
+                </DialogHeader>
+                <div className="grid gap-4 py-4">
+                    <div className="grid grid-cols-4 items-center gap-4">
+                        <Label htmlFor="email" className="text-right">
+                            Email
+                        </Label>
+                        <Input id="email" type="email" placeholder="name@example.com" className="col-span-3" />
+                    </div>
+                </div>
+                <DialogFooter>
+                    <Button type="submit" onClick={handleInvite}>Send Invitation</Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
+    );
+}
 
 
 export default function SettingsPage() {
     const { toast } = useToast();
+    const [users, setUsers] = useState<TeamUser[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
+    const { environment } = useEnvironment();
 
-    const handleSaveChanges = () => {
+    useEffect(() => {
+        const fetchUsers = async () => {
+            setIsLoading(true);
+            try {
+                const response = await fetch(`/api/users?env=${environment}`);
+                if (!response.ok) {
+                    const errorData = await response.json().catch(() => ({ message: 'An unknown API error occurred.' }));
+                    throw new Error(errorData.details || errorData.message || `API call failed with status: ${response.status}`);
+                }
+                const data = await response.json();
+                setUsers(data);
+            } catch (error: any) {
+                 console.error("Failed to fetch users:", error);
+                 toast({
+                    variant: "destructive",
+                    title: "Failed to Load Team Data",
+                    description: error.message,
+                });
+                setUsers([]);
+            } finally {
+                setIsLoading(false);
+            }
+        };
+        fetchUsers();
+    }, [environment, toast]);
+
+
+    const handleRoleChange = (userId: number, newRole: string) => {
+        // Mock update
+        setUsers(users.map(u => u.id === userId ? { ...u, role: newRole as "Admin" | "Analyst" } : u));
         toast({
-            title: 'Settings Saved',
-            description: 'Your personal information has been updated.',
+            title: 'User Role Updated',
+            description: `The user's role has been changed to ${newRole}.`,
         });
     };
 
-     const handleUpdatePassword = () => {
+    const handleRemoveUser = (userId: number) => {
+        // Mock removal
+        setUsers(users.filter(u => u.id !== userId));
         toast({
-            title: 'Security Updated',
-            description: 'Your password has been successfully changed.',
+            title: 'User Removed',
+            description: 'The user has been removed from the team.',
+            variant: 'destructive'
         });
     };
 
     return (
         <div className="space-y-8">
-            {/* Header Section */}
-            <div className="flex items-center gap-6">
-                <Avatar className="h-24 w-24 border-2 border-slate-800">
-                    <AvatarImage src={placeholderData.placeholderImages[0].imageUrl} alt="Jane Doe" data-ai-hint="person face" />
-                    <AvatarFallback>JD</AvatarFallback>
-                </Avatar>
-                <div>
-                    <h1 className="text-3xl font-bold">Jane Doe</h1>
-                    <p className="text-muted-foreground">Senior SOC Analyst</p>
-                    <p className="text-sm text-muted-foreground">jane.doe@atlas-sec.com</p>
-                </div>
-            </div>
-
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
-                <div className="space-y-8">
-                    {/* Personal Information Card */}
-                    <Card>
-                        <CardHeader>
-                            <CardTitle>Personal Information</CardTitle>
-                            <CardDescription>Update your personal details.</CardDescription>
-                        </CardHeader>
-                        <CardContent className="space-y-4">
-                            <div className="grid grid-cols-2 gap-4">
-                                <div className="space-y-2">
-                                    <Label htmlFor="first-name">First Name</Label>
-                                    <Input id="first-name" defaultValue="Jane" />
-                                </div>
-                                <div className="space-y-2">
-                                    <Label htmlFor="last-name">Last Name</Label>
-                                    <Input id="last-name" defaultValue="Doe" />
-                                </div>
-                            </div>
-                            <div className="space-y-2">
-                                <Label htmlFor="email">Email Address</Label>
-                                <Input id="email" type="email" defaultValue="jane.doe@atlas-sec.com" />
-                            </div>
-                            <div className="space-y-2">
-                                <Label htmlFor="phone">Phone Number</Label>
-                                <Input id="phone" type="tel" defaultValue="+1 (555) 123-4567" />
-                            </div>
-                            <Button onClick={handleSaveChanges} className="bg-blue-600 hover:bg-blue-700">Save Changes</Button>
-                        </CardContent>
-                    </Card>
-
-                    {/* Account Preferences Card */}
-                    <Card>
-                        <CardHeader>
-                            <CardTitle>Account Preferences</CardTitle>
-                            <CardDescription>Set your notification and timezone settings.</CardDescription>
-                        </CardHeader>
-                        <CardContent className="space-y-6">
-                             <div className="space-y-2">
-                                <Label htmlFor="timezone">Timezone</Label>
-                                <Select defaultValue="utc">
-                                    <SelectTrigger id="timezone">
-                                        <SelectValue />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        <SelectItem value="utc">UTC (Coordinated Universal Time)</SelectItem>
-                                        <SelectItem value="est">EST (Eastern Standard Time)</SelectItem>
-                                        <SelectItem value="pst">PST (Pacific Standard Time)</SelectItem>
-                                    </SelectContent>
-                                </Select>
-                            </div>
-                            <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
-                                <div>
-                                    <h4 className="font-semibold flex items-center gap-2"><Mail className="h-4 w-4" />Daily Threat Summaries</h4>
-                                    <p className="text-xs text-muted-foreground">Receive a summary of system activity every 24 hours.</p>
-                                </div>
-                                <Switch defaultChecked />
-                            </div>
-                            <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
-                                <div>
-                                    <h4 className="font-semibold flex items-center gap-2"><Shield className="h-4 w-4" />Critical Alert Notifications</h4>
-                                    <p className="text-xs text-muted-foreground">Get notified immediately for critical-severity incidents.</p>
-                                </div>
-                                <Switch defaultChecked />
-                            </div>
-                        </CardContent>
-                    </Card>
-
-                </div>
-
-                <div className="space-y-8">
-                    {/* Security & Authentication Card */}
-                    <Card>
-                        <CardHeader>
-                            <CardTitle>Security & Authentication</CardTitle>
-                            <CardDescription>Manage your password and two-factor authentication.</CardDescription>
-                        </CardHeader>
-                        <CardContent className="space-y-6">
-                            <div className="space-y-4 p-4 border border-slate-800 rounded-md">
-                                <h4 className="font-semibold flex items-center gap-2"><Lock className="h-4 w-4" />Change Password</h4>
-                                <div className="space-y-2">
-                                    <Label htmlFor="current-password">Current Password</Label>
-                                    <Input id="current-password" type="password" placeholder="••••••••" />
-                                </div>
-                                <div className="space-y-2">
-                                    <Label htmlFor="new-password">New Password</Label>
-                                    <Input id="new-password" type="password" placeholder="••••••••" />
-                                </div>
-                                 <div className="space-y-2">
-                                    <Label htmlFor="confirm-password">Confirm New Password</Label>
-                                    <Input id="confirm-password" type="password" placeholder="••••••••" />
-                                </div>
-                                <Button onClick={handleUpdatePassword} variant="secondary">Update Password</Button>
-                            </div>
-                            <div className="flex items-center justify-between p-4 border border-slate-800 rounded-md">
-                                <div>
-                                    <h4 className="font-semibold">Two-Factor Authentication (2FA)</h4>
-                                    <p className="text-sm text-muted-foreground">Recommended for all SOC environments.</p>
-                                </div>
-                                <Switch />
-                            </div>
-                        </CardContent>
-                    </Card>
-
-                     {/* Recent Account Activity Card */}
-                    <Card>
-                        <CardHeader>
-                            <CardTitle className="flex items-center gap-2"><Clock className="h-5 w-5" /> Recent Account Activity</CardTitle>
-                            <CardDescription>A log of recent sign-in attempts to your account.</CardDescription>
-                        </CardHeader>
-                        <CardContent>
-                            <Table>
-                                <TableHeader>
-                                    <TableRow>
-                                        <TableHead>Date/Time</TableHead>
-                                        <TableHead>IP Address</TableHead>
-                                        <TableHead>Location</TableHead>
-                                        <TableHead>Status</TableHead>
-                                    </TableRow>
-                                </TableHeader>
-                                <TableBody>
-                                    {recentActivity.map((activity, index) => (
-                                        <TableRow key={index}>
-                                            <TableCell className="text-xs">{activity.dateTime}</TableCell>
-                                            <TableCell className="font-mono text-xs">{activity.ip}</TableCell>
-                                            <TableCell className="text-xs">{activity.location}</TableCell>
-                                            <TableCell className="text-xs">{activity.status}</TableCell>
-                                        </TableRow>
-                                    ))}
-                                </TableBody>
-                            </Table>
-                        </CardContent>
-                    </Card>
-                </div>
-            </div>
+            <h1 className="text-3xl font-bold">Team Management</h1>
+            <Card>
+                <CardHeader className="flex flex-row items-center justify-between">
+                    <div>
+                        <CardTitle>Users</CardTitle>
+                        <CardDescription>Manage your team members and their roles.</CardDescription>
+                    </div>
+                    <InviteUserDialog />
+                </CardHeader>
+                <CardContent>
+                    <Table>
+                        <TableHeader>
+                            <TableRow>
+                                <TableHead>User</TableHead>
+                                <TableHead className="w-[150px]">Role</TableHead>
+                                <TableHead className="text-right w-[100px]">Actions</TableHead>
+                            </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                             {isLoading && Array.from({length: 3}).map((_, i) => (
+                                <TableRow key={i}>
+                                    <TableCell>
+                                        <div className="flex items-center gap-4">
+                                            <Skeleton className="h-10 w-10 rounded-full" />
+                                            <div className="space-y-1">
+                                                <Skeleton className="h-4 w-24" />
+                                                <Skeleton className="h-3 w-32" />
+                                            </div>
+                                        </div>
+                                    </TableCell>
+                                    <TableCell><Skeleton className="h-8 w-full" /></TableCell>
+                                    <TableCell className="text-right"><Skeleton className="h-8 w-8 ml-auto" /></TableCell>
+                                </TableRow>
+                            ))}
+                            {!isLoading && users.map((user) => (
+                                <TableRow key={user.id}>
+                                    <TableCell>
+                                        <div className="flex items-center gap-4">
+                                            <Avatar>
+                                                <AvatarImage src={user.avatar} alt={user.name} data-ai-hint="person face" />
+                                                <AvatarFallback>{user.name.split(' ').map(n => n[0]).join('')}</AvatarFallback>
+                                            </Avatar>
+                                            <div>
+                                                <div className="font-medium">{user.name}</div>
+                                                <div className="text-sm text-muted-foreground">{user.email}</div>
+                                            </div>
+                                        </div>
+                                    </TableCell>
+                                    <TableCell>
+                                        <Select
+                                            defaultValue={user.role}
+                                            onValueChange={(value) => handleRoleChange(user.id, value)}
+                                        >
+                                            <SelectTrigger>
+                                                <SelectValue />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                <SelectItem value="Admin">Admin</SelectItem>
+                                                <SelectItem value="Analyst">Analyst</SelectItem>
+                                            </SelectContent>
+                                        </Select>
+                                    </TableCell>
+                                    <TableCell className="text-right">
+                                        <Button variant="ghost" size="icon" onClick={() => handleRemoveUser(user.id)}>
+                                            <Trash2 className="h-4 w-4 text-muted-foreground hover:text-destructive" />
+                                        </Button>
+                                    </TableCell>
+                                </TableRow>
+                            ))}
+                             {!isLoading && users.length === 0 && (
+                                <TableRow>
+                                    <TableCell colSpan={3} className="text-center h-24 text-muted-foreground">
+                                        No users found.
+                                    </TableCell>
+                                </TableRow>
+                            )}
+                        </TableBody>
+                    </Table>
+                </CardContent>
+            </Card>
         </div>
     );
 }

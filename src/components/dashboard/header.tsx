@@ -36,7 +36,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { cn, getSeverityClassNames } from '@/lib/utils';
 import { Badge } from '../ui/badge';
-import type { RecentAlert, User as UserType } from '@/lib/types';
+import type { RecentAlert, User as UserType, Application } from '@/lib/types';
 import { Skeleton } from '../ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
 import { useEnvironment } from '@/context/EnvironmentContext';
@@ -68,6 +68,7 @@ function AlertItem({ alert }: { alert: RecentAlert }) {
 type HeaderData = {
   user: UserType;
   recentAlerts: RecentAlert[];
+  applications: Application[];
 };
 
 export function DashboardHeader() {
@@ -200,6 +201,7 @@ export function DashboardHeader() {
                   <AvatarImage
                     src={data.user.avatar}
                     alt={data.user.name}
+                    data-ai-hint="person face"
                   />
                   <AvatarFallback>
                     {data.user.name
@@ -224,7 +226,7 @@ export function DashboardHeader() {
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
             <DropdownMenuItem asChild>
-              <Link href="/settings">
+              <Link href="/profile">
                 <User className="mr-2 h-4 w-4" />
                 <span>Profile</span>
               </Link>

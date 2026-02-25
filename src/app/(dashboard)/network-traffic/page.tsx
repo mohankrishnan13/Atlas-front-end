@@ -9,6 +9,7 @@ import { Gauge, Users, XCircle, ArrowRight } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { NetworkTrafficData } from "@/lib/types";
 import { useToast } from "@/hooks/use-toast";
+import { useEnvironment } from "@/context/EnvironmentContext";
 
 function StatCard({ title, value, icon: Icon, isLoading }: { title: string, value?: string | number, icon: React.ElementType, isLoading: boolean }) {
     return (
@@ -48,7 +49,8 @@ function BandwidthGauge({ bandwidth, isLoading }: { bandwidth?: number, isLoadin
     )
 }
 
-function TrafficFlowMap({ isLoading }: { isLoading: boolean }) {
+function TrafficFlowMap({ isLoading, environment }: { isLoading: boolean, environment: string }) {
+    const isLocal = environment === 'local';
     return (
         <Card>
             <CardHeader>
@@ -58,21 +60,21 @@ function TrafficFlowMap({ isLoading }: { isLoading: boolean }) {
                 {isLoading ? <Skeleton className="h-full w-full" /> : 
                 <>
                     <div className="text-center space-y-2">
-                        <div className="font-bold text-muted-foreground">External IPs</div>
-                        <div className="p-4 bg-muted rounded-lg">203.0.113.54</div>
-                        <div className="p-4 bg-muted rounded-lg">198.51.100.2</div>
+                        <div className="font-bold text-muted-foreground">{isLocal ? "Employee Workstations" : "External IPs"}</div>
+                        <div className="p-4 bg-muted rounded-lg">{isLocal ? "10.10.10.0/24" : "203.0.113.54"}</div>
+                        <div className="p-4 bg-muted rounded-lg">{isLocal ? "10.10.20.0/24" : "198.51.100.2"}</div>
                     </div>
                     <ArrowRight className="h-8 w-8 text-muted-foreground mx-4" />
                     <div className="text-center space-y-2">
-                        <div className="font-bold text-muted-foreground">Firewall</div>
-                        <div className="p-8 bg-blue-500/20 text-blue-300 rounded-full flex items-center justify-center">FW-01</div>
+                        <div className="font-bold text-muted-foreground">{isLocal ? "Office Firewall" : "Cloud Firewall"}</div>
+                        <div className="p-8 bg-blue-500/20 text-blue-300 rounded-full flex items-center justify-center">{isLocal ? "FW-CORP-01" : "FW-CLOUD-01"}</div>
                     </div>
                     <ArrowRight className="h-8 w-8 text-muted-foreground mx-4" />
                     <div className="space-y-4">
-                        <div className="font-bold text-muted-foreground text-center">Internal App Nodes</div>
-                        <div className="p-4 bg-secondary rounded-lg">10.0.1.12 [Payment-Service]</div>
-                        <div className="p-4 bg-secondary rounded-lg">10.0.2.34 [User-DB]</div>
-                        <div className="p-4 bg-secondary rounded-lg">10.0.5.88 [Data-Pipeline]</div>
+                        <div className="font-bold text-muted-foreground text-center">{isLocal ? "Internal Resources" : "Internal App Nodes"}</div>
+                        <div className="p-4 bg-secondary rounded-lg">{isLocal ? "10.0.50.5 [HR-DB]" : "10.0.1.12 [Payment-Service]"}</div>
+                        <div className="p-4 bg-secondary rounded-lg">{isLocal ? "10.0.60.10 [File-Server]" : "10.0.2.34 [User-DB]"}</div>
+                        <div className="p-4 bg-secondary rounded-lg">{isLocal ? "10.0.70.15 [Intranet-Portal]" : "10.0.5.88 [Data-Pipeline]"}</div>
                     </div>
                 </>}
             </CardContent>
@@ -84,12 +86,13 @@ export default function NetworkTrafficPage() {
     const [data, setData] = useState<NetworkTrafficData | null>(null);
     const [isLoading, setIsLoading] = useState(true);
     const { toast } = useToast();
+    const { environment } = useEnvironment();
 
      useEffect(() => {
         const fetchData = async () => {
             setIsLoading(true);
             try {
-                const response = await fetch('/api/network-traffic');
+                const response = await fetch(`/api/network-traffic?env=${environment}`);
                 if (!response.ok) {
                     const errorData = await response.json().catch(() => ({ message: 'An unknown API error occurred.' }));
                     throw new Error(errorData.details || errorData.message || `API call failed with status: ${response.status}`);
@@ -109,7 +112,7 @@ export default function NetworkTrafficPage() {
             }
         };
         fetchData();
-    }, [toast]);
+    }, [toast, environment]);
 
     return (
         <div className="space-y-8">
@@ -120,7 +123,7 @@ export default function NetworkTrafficPage() {
                 <StatCard title="Dropped Packets" value={data?.droppedPackets.toLocaleString()} icon={XCircle} isLoading={isLoading} />
             </div>
 
-            <TrafficFlowMap isLoading={isLoading} />
+            <TrafficFlowMap isLoading={isLoading} environment={environment} />
 
             <Card>
                 <CardHeader>

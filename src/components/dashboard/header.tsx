@@ -1,8 +1,15 @@
 "use client";
 
-import React, { useState, useEffect } from 'react';
-import Link from 'next/link';
-import { Bell, LogOut, Settings, ShieldCheck, User, LoaderCircle } from 'lucide-react';
+import React, { useState, useEffect } from "react";
+import Link from "next/link";
+import {
+  Bell,
+  LogOut,
+  Settings,
+  ShieldCheck,
+  User,
+  LoaderCircle,
+} from "lucide-react";
 import {
   Select,
   SelectContent,
@@ -10,8 +17,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Button } from '@/components/ui/button';
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
+import { Button } from "@/components/ui/button";
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from "@/components/ui/sheet";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   DropdownMenu,
@@ -21,17 +34,23 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { cn, getSeverityClassNames } from '@/lib/utils';
-import { Badge } from '../ui/badge';
-import type { RecentAlert, User as UserType, Application } from '@/lib/types';
-import { Skeleton } from '../ui/skeleton';
-import { useToast } from '@/hooks/use-toast';
+import { cn, getSeverityClassNames } from "@/lib/utils";
+import { Badge } from "../ui/badge";
+import type { RecentAlert, User as UserType, Application } from "@/lib/types";
+import { Skeleton } from "../ui/skeleton";
+import { useToast } from "@/hooks/use-toast";
+import { useEnvironment } from "@/context/EnvironmentContext";
 
 function AlertItem({ alert }: { alert: RecentAlert }) {
   const severityClasses = getSeverityClassNames(alert.severity);
   return (
     <div className="flex items-start gap-3 p-4 border-b border-border last:border-b-0 hover:bg-muted/50">
-      <div className={cn("mt-1 h-2.5 w-2.5 rounded-full", severityClasses.bg.replace('bg-', ''))} />
+      <div
+        className={cn(
+          "mt-1 h-2.5 w-2.5 rounded-full",
+          severityClasses.bg.replace("bg-", "")
+        )}
+      />
       <div className="flex-1">
         <div className="flex justify-between items-center">
           <p className="font-semibold">{alert.app}</p>
@@ -56,24 +75,31 @@ export function DashboardHeader() {
   const [data, setData] = useState<HeaderData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const { toast } = useToast();
+  const { environment, setEnvironment } = useEnvironment();
 
   useEffect(() => {
     async function fetchData() {
       setIsLoading(true);
       try {
-        const res = await fetch('/api/header-data');
-         if (!res.ok) {
-            const errorData = await res.json().catch(() => ({ message: 'An unknown API error occurred.' }));
-            throw new Error(errorData.details || errorData.message || `API call failed with status: ${res.status}`);
+        const res = await fetch(`/api/header-data?env=${environment}`);
+        if (!res.ok) {
+          const errorData = await res
+            .json()
+            .catch(() => ({ message: "An unknown API error occurred." }));
+          throw new Error(
+            errorData.details ||
+              errorData.message ||
+              `API call failed with status: ${res.status}`
+          );
         }
         const result = await res.json();
         setData(result);
       } catch (error: any) {
         console.error("Failed to fetch header data", error);
         toast({
-            variant: "destructive",
-            title: "Failed to Load Header Data",
-            description: error.message,
+          variant: "destructive",
+          title: "Failed to Load Header Data",
+          description: error.message,
         });
         setData(null);
       } finally {
@@ -81,22 +107,27 @@ export function DashboardHeader() {
       }
     }
     fetchData();
-  }, [toast]);
+  }, [toast, environment]);
 
   return (
     <header className="sticky top-0 z-30 hidden h-16 items-center gap-4 border-b bg-card px-4 md:flex md:px-6">
       <div className="flex items-center gap-2">
         <ShieldCheck className="h-7 w-7 text-primary" />
         <h1 className="text-lg font-semibold tracking-tighter">
-          ATLAS <span className="hidden lg:inline-block font-normal text-muted-foreground">| Advanced Traffic Layer Anomaly System</span>
+          ATLAS{" "}
+          <span className="hidden lg:inline-block font-normal text-muted-foreground">
+            | Advanced Traffic Layer Anomaly System
+          </span>
         </h1>
       </div>
 
       <div className="flex-1 flex justify-center">
         <div className="w-full max-w-sm">
-           <Select defaultValue="all" disabled={isLoading || !data?.applications}>
+          <Select defaultValue="all" disabled={isLoading || !data?.applications}>
             <SelectTrigger className="w-full">
-              <SelectValue placeholder={isLoading ? "Loading..." : "Application Context"} />
+              <SelectValue
+                placeholder={isLoading ? "Loading..." : "Application Context"}
+              />
             </SelectTrigger>
             <SelectContent>
               {data?.applications?.map((app) => (
@@ -104,14 +135,21 @@ export function DashboardHeader() {
                   {app.name}
                 </SelectItem>
               ))}
-               {!isLoading && data?.applications?.length === 0 && <SelectItem value="none" disabled>No applications found</SelectItem>}
+              {!isLoading && data?.applications?.length === 0 && (
+                <SelectItem value="none" disabled>
+                  No applications found
+                </SelectItem>
+              )}
             </SelectContent>
           </Select>
         </div>
       </div>
 
       <div className="flex items-center gap-4">
-        <Select defaultValue="cloud">
+        <Select
+          value={environment}
+          onValueChange={(value) => setEnvironment(value as "cloud" | "local")}
+        >
           <SelectTrigger className="w-[120px]">
             <SelectValue placeholder="Environment" />
           </SelectTrigger>
@@ -138,9 +176,19 @@ export function DashboardHeader() {
               <SheetTitle>Recent Alerts</SheetTitle>
             </SheetHeader>
             <div className="h-[calc(100vh-4.5rem)] overflow-y-auto">
-              {isLoading && <div className="p-4 text-center text-muted-foreground">Loading alerts...</div>}
-              {!isLoading && (!data || data.recentAlerts.length === 0) && <div className="p-4 text-center text-muted-foreground">No recent alerts.</div>}
-              {data?.recentAlerts.map(alert => <AlertItem key={alert.id} alert={alert} />)}
+              {isLoading && (
+                <div className="p-4 text-center text-muted-foreground">
+                  Loading alerts...
+                </div>
+              )}
+              {!isLoading && (!data || data.recentAlerts.length === 0) && (
+                <div className="p-4 text-center text-muted-foreground">
+                  No recent alerts.
+                </div>
+              )}
+              {data?.recentAlerts.map((alert) => (
+                <AlertItem key={alert.id} alert={alert} />
+              ))}
             </div>
           </SheetContent>
         </Sheet>
@@ -152,7 +200,11 @@ export function DashboardHeader() {
                 <Skeleton className="h-10 w-10 rounded-full" />
               ) : (
                 <Avatar className="h-10 w-10">
-                  <AvatarImage src={data.user.avatar} alt={data.user.name} data-ai-hint="woman face" />
+                  <AvatarImage
+                    src={data.user.avatar}
+                    alt={data.user.name}
+                    data-ai-hint="woman face"
+                  />
                   <AvatarFallback>{data.user.name.charAt(0)}</AvatarFallback>
                 </Avatar>
               )}
@@ -161,8 +213,12 @@ export function DashboardHeader() {
           <DropdownMenuContent className="w-56" align="end" forceMount>
             <DropdownMenuLabel className="font-normal">
               <div className="flex flex-col space-y-1">
-                <p className="text-sm font-medium leading-none">{data?.user?.name || 'User'}</p>
-                <p className="text-xs leading-none text-muted-foreground">{data?.user?.email || 'email@example.com'}</p>
+                <p className="text-sm font-medium leading-none">
+                  {data?.user?.name || "User"}
+                </p>
+                <p className="text-xs leading-none text-muted-foreground">
+                  {data?.user?.email || "email@example.com"}
+                </p>
               </div>
             </DropdownMenuLabel>
             <DropdownMenuSeparator />

@@ -10,31 +10,11 @@ export async function POST(request: Request) {
     );
   }
 
-  const backendUrl = `${process.env.ATLAS_BACKEND_URL}/api/v1/endpoints/quarantine`;
+  // In a real app, you would call the Wazuh/EDR API here.
+  console.log(`Received quarantine command for: ${workstationId}`);
 
-  try {
-    const response = await fetch(backendUrl, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        // 'Authorization': `Bearer ${process.env.BACKEND_API_TOKEN}`
-      },
-      body: JSON.stringify({ workstationId }),
-    });
+  // Simulate API call
+  await new Promise(resolve => setTimeout(resolve, 500));
 
-    if (!response.ok) {
-        const errorText = await response.text();
-        console.error(`Backend error from ${backendUrl}: ${response.status} ${response.statusText}`, errorText);
-        throw new Error(`Failed to post to backend. Status: ${response.status}`);
-    }
-    const data = await response.json();
-    return NextResponse.json(data);
-  } catch (error: any) {
-    console.error(`Failed to proxy POST request to ${backendUrl}:`, error);
-    const details = `Could not connect to the backend service at ${backendUrl}. Please ensure the backend server is running and accessible. Details: ${error.message}`;
-    return new NextResponse(
-      JSON.stringify({ message: 'Failed to send quarantine command.', details }),
-      { status: 502, headers: { 'Content-Type': 'application/json' } }
-    );
-  }
+  return NextResponse.json({ success: true, message: `Device ${workstationId} has been quarantined.` });
 }

@@ -15,6 +15,7 @@ import { Line, LineChart as RechartsLineChart, CartesianGrid, XAxis, YAxis, Tool
 import { Skeleton } from "@/components/ui/skeleton";
 import type { ApiMonitoringData } from "@/lib/types";
 import { useToast } from "@/hooks/use-toast";
+import { useEnvironment } from "@/context/EnvironmentContext";
 
 const chartConfig = {
   actual: {
@@ -45,12 +46,13 @@ export default function ApiMonitoringPage() {
     const [data, setData] = useState<ApiMonitoringData | null>(null);
     const [isLoading, setIsLoading] = useState(true);
     const { toast } = useToast();
+    const { environment } = useEnvironment();
 
     useEffect(() => {
         const fetchData = async () => {
             setIsLoading(true);
             try {
-                const response = await fetch('/api/api-monitoring');
+                const response = await fetch(`/api/api-monitoring?env=${environment}`);
                 if (!response.ok) {
                     const errorData = await response.json().catch(() => ({ message: 'An unknown API error occurred.' }));
                     throw new Error(errorData.details || errorData.message || `API call failed with status: ${response.status}`);
@@ -70,7 +72,7 @@ export default function ApiMonitoringPage() {
             }
         };
         fetchData();
-    }, [toast]);
+    }, [toast, environment]);
 
     return (
         <div className="space-y-8">

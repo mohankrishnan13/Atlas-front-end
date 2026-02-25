@@ -14,6 +14,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import type { TeamUser } from "@/lib/types";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
+import { useEnvironment } from "@/context/EnvironmentContext";
 
 function GeneralSettings() {
     return (
@@ -141,12 +142,13 @@ function UserAccess() {
     const [users, setUsers] = useState<TeamUser[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const { toast } = useToast();
+    const { environment } = useEnvironment();
 
     useEffect(() => {
         const fetchData = async () => {
             setIsLoading(true);
             try {
-                const response = await fetch('/api/users');
+                const response = await fetch(`/api/users?env=${environment}`);
                  if (!response.ok) {
                     const errorData = await response.json().catch(() => ({ message: 'An unknown API error occurred.' }));
                     throw new Error(errorData.details || errorData.message || `API call failed with status: ${response.status}`);
@@ -166,7 +168,7 @@ function UserAccess() {
             }
         };
         fetchData();
-    }, [toast]);
+    }, [toast, environment]);
 
     return (
         <Card>

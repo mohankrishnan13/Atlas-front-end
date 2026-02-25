@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Bug, LineChart, Server, Waves, LoaderCircle } from "lucide-react";
 import { cn, getSeverityClassNames } from "@/lib/utils";
 import type { Severity, OverviewData, Microservice, SystemAnomaly, TimeSeriesData, AppAnomaly } from "@/lib/types";
+import { useEnvironment } from "@/context/EnvironmentContext";
 
 import { generateDailyThreatBriefing } from "@/ai/flows/ai-daily-threat-briefing-flow";
 
@@ -21,7 +22,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
 
 
-function AiDailyBriefing({ data, isLoading }: { data: OverviewData | null, isLoading: boolean }) {
+function AiDailyBriefing({ data, isLoading, environment }: { data: OverviewData | null, isLoading: boolean, environment: string }) {
     const [briefing, setBriefing] = useState("Generating briefing...");
     const [isBriefingLoading, setIsBriefingLoading] = useState(false);
 
@@ -47,6 +48,7 @@ function AiDailyBriefing({ data, isLoading }: { data: OverviewData | null, isLoa
             };
 
             try {
+                // Add context to the prompt for better briefings
                 const result = await generateDailyThreatBriefing(briefingInput);
                 setBriefing(result.briefing);
             } catch (error) {
@@ -57,7 +59,7 @@ function AiDailyBriefing({ data, isLoading }: { data: OverviewData | null, isLoa
             }
         };
         fetchBriefing();
-    }, [data, isLoading]);
+    }, [data, isLoading, environment]);
     
     return (
         <Card className="col-span-1 md:col-span-2 xl:col-span-4 bg-card">
@@ -248,12 +250,13 @@ export default function OverviewPage() {
     const [data, setData] = useState<OverviewData | null>(null);
     const [isLoading, setIsLoading] = useState(true);
     const { toast } = useToast();
+    const { environment } = useEnvironment();
 
     useEffect(() => {
         const fetchData = async () => {
             setIsLoading(true);
             try {
-                const response = await fetch('/api/overview');
+                const response = await fetch(`/api/overview?env=${environment}`);
                 if (!response.ok) {
                     const errorData = await response.json().catch(() => ({ message: 'An unknown API error occurred.' }));
                     throw new Error(errorData.details || errorData.message || `API call failed with status: ${response.status}`);
@@ -273,12 +276,12 @@ export default function OverviewPage() {
             }
         };
         fetchData();
-    }, [toast]);
+    }, [toast, environment]);
 
     return (
         <div className="space-y-8">
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-                <AiDailyBriefing data={data} isLoading={isLoading} />
+                <AiDailyBriefing data={data} isLoading={isLoading} environment={environment} />
             </div>
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
                 <StatCard title="Total API Requests" value={data?.apiRequests?.toLocaleString()} icon={LineChart} isLoading={isLoading} />

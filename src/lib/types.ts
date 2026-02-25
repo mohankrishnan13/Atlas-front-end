@@ -14,7 +14,7 @@ export type Application = {
 };
 
 export type User = {
-  name: string;
+  name:string;
   email: string;
   avatar: string;
 };

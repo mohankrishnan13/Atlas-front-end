@@ -1,34 +1,26 @@
 import { NextResponse } from 'next/server';
+import type { TeamUser } from '@/lib/types';
+import placeholderData from '@/lib/placeholder-images.json';
 
-// This is a proxy route to your backend.
-// It fetches data from your actual backend API and forwards it to the frontend.
-// This is a good practice to avoid CORS issues and to keep your backend URL and any API keys secret.
-export async function GET() {
-  const backendUrl = `${process.env.ATLAS_BACKEND_URL}/api/v1/settings/users`;
+const CLOUD_USERS: TeamUser[] = [
+    { id: 1, name: "Alice DevOps", email: "alice@atlas-sec.com", role: "Admin", avatar: placeholderData.placeholderImages[0].imageUrl },
+    { id: 2, name: "Bob SRE", email: "bob@atlas-sec.com", role: "Analyst", avatar: placeholderData.placeholderImages[1].imageUrl },
+    { id: 3, name: "Charlie SecOps", email: "charlie@atlas-sec.com", role: "Analyst", avatar: placeholderData.placeholderImages[3].imageUrl },
+];
 
-  try {
-    const response = await fetch(backendUrl, {
-        // If your backend requires authentication (e.g., an API token),
-        // you would add the Authorization header here.
-        // headers: {
-        //   'Authorization': `Bearer ${process.env.BACKEND_API_TOKEN}`
-        // }
-    });
+const LOCAL_USERS: TeamUser[] = [
+    { id: 1, name: "Dave IT", email: "dave.it@atlas-internal.com", role: "Admin", avatar: placeholderData.placeholderImages[1].imageUrl },
+    { id: 2, name: "Eve Security", email: "eve.sec@atlas-internal.com", role: "Admin", avatar: placeholderData.placeholderImages[2].imageUrl },
+    { id: 3, name: "Frank Helpdesk", email: "frank.hd@atlas-internal.com", role: "Analyst", avatar: placeholderData.placeholderImages[3].imageUrl },
+];
 
-    if (!response.ok) {
-        const errorText = await response.text();
-        console.error(`Backend error from ${backendUrl}: ${response.status} ${response.statusText}`, errorText);
-        throw new Error(`Failed to fetch from backend. Status: ${response.status}`);
-    }
-    const data = await response.json();
-    return NextResponse.json(data);
-  } catch (error: any) {
-    console.error(`Failed to proxy request to ${backendUrl}:`, error);
-    // Return a 502 Bad Gateway error if the proxy fails
-    const details = `Could not connect to the backend service at ${backendUrl}. Please ensure the backend server is running and accessible from the application. Details: ${error.message}`;
-    return new NextResponse(
-      JSON.stringify({ message: 'Failed to fetch data from backend.', details }),
-      { status: 502, headers: { 'Content-Type': 'application/json' } }
-    );
-  }
+export async function GET(request: Request) {
+  const { searchParams } = new URL(request.url);
+  const env = searchParams.get('env') || 'cloud';
+
+  const data = env === 'local' ? LOCAL_USERS : CLOUD_USERS;
+  
+  await new Promise(resolve => setTimeout(resolve, 500));
+
+  return NextResponse.json(data);
 }

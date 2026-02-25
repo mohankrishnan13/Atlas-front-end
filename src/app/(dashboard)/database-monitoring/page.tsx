@@ -14,6 +14,7 @@ import {
 } from "@/components/ui/chart"
 import { Area, AreaChart, CartesianGrid, XAxis, YAxis, Tooltip as RechartsTooltip, ResponsiveContainer, Legend } from "recharts"
 import { useToast } from "@/hooks/use-toast";
+import { useEnvironment } from "@/context/EnvironmentContext";
 
 const chartConfig = {
   SELECT: { label: "SELECT", color: "hsl(var(--chart-1))" },
@@ -44,12 +45,13 @@ export default function DatabaseMonitoringPage() {
     const [data, setData] = useState<DbMonitoringData | null>(null);
     const [isLoading, setIsLoading] = useState(true);
     const { toast } = useToast();
+    const { environment } = useEnvironment();
 
      useEffect(() => {
         const fetchData = async () => {
             setIsLoading(true);
             try {
-                const response = await fetch('/api/db-monitoring');
+                const response = await fetch(`/api/db-monitoring?env=${environment}`);
                  if (!response.ok) {
                     const errorData = await response.json().catch(() => ({ message: 'An unknown API error occurred.' }));
                     throw new Error(errorData.details || errorData.message || `API call failed with status: ${response.status}`);
@@ -69,7 +71,7 @@ export default function DatabaseMonitoringPage() {
             }
         };
         fetchData();
-    }, [toast]);
+    }, [toast, environment]);
 
     return (
         <div className="space-y-8">

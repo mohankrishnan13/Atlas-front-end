@@ -40,6 +40,7 @@ import type { RecentAlert, User as UserType, Application } from '@/lib/types';
 import { Skeleton } from '../ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
 import { useEnvironment } from '@/context/EnvironmentContext';
+import { useAuth } from '@/context/AuthContext';
 
 function AlertItem({ alert }: { alert: RecentAlert }) {
   const severityClasses = getSeverityClassNames(alert.severity);
@@ -76,6 +77,7 @@ export function DashboardHeader() {
   const [isLoading, setIsLoading] = useState(true);
   const { toast } = useToast();
   const { environment, setEnvironment } = useEnvironment();
+  const { user, logout } = useAuth();
   const router = useRouter();
 
   useEffect(() => {
@@ -111,8 +113,7 @@ export function DashboardHeader() {
   }, [toast, environment]);
 
   const handleLogout = () => {
-    // In a real app, you would also clear auth tokens here
-    router.push('/login');
+    logout();
   };
 
   return (
@@ -199,12 +200,12 @@ export function DashboardHeader() {
               ) : (
                 <Avatar className="h-10 w-10">
                   <AvatarImage
-                    src={data.user.avatar}
-                    alt={data.user.name}
+                    src={user?.avatar || data?.user?.avatar}
+                    alt={user?.full_name || data?.user?.name}
                     data-ai-hint="person face"
                   />
                   <AvatarFallback>
-                    {data.user.name
+                    {(user?.full_name || data?.user?.name || 'U')
                       .split(' ')
                       .map((n) => n[0])
                       .join('')}
@@ -217,10 +218,10 @@ export function DashboardHeader() {
             <DropdownMenuLabel className="font-normal">
               <div className="flex flex-col space-y-1">
                 <p className="text-sm font-medium leading-none">
-                  {data?.user?.name || 'User'}
+                  {user?.full_name || data?.user?.name || 'User'}
                 </p>
                 <p className="text-xs leading-none text-muted-foreground">
-                  {data?.user?.email || 'email@example.com'}
+                  {user?.email || data?.user?.email || 'email@example.com'}
                 </p>
               </div>
             </DropdownMenuLabel>

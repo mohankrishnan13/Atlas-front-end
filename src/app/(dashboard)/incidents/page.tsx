@@ -156,7 +156,15 @@ export default function IncidentsPage() {
         const fetchData = async () => {
             setIsLoading(true);
             try {
-                const response = await fetch(`/api/incidents?env=${environment}`);
+                const token = localStorage.getItem('atlas_token');
+                const headers: Record<string, string> = {};
+                if (token) {
+                    headers['Authorization'] = `Bearer ${token}`;
+                }
+                
+                const response = await fetch(`/api/incidents?env=${environment}`, {
+                    headers,
+                });
                 if (!response.ok) {
                     const errorData = await response.json().catch(() => ({ message: 'An unknown API error occurred.' }));
                     throw new Error(errorData.details || errorData.message || `API call failed with status: ${response.status}`);

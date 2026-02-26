@@ -11,6 +11,8 @@ import { Input } from '@/components/ui/input';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { AuthCard } from '@/components/auth/auth-card';
 import { LoaderCircle } from 'lucide-react';
+import { useAuth } from '@/context/AuthContext';
+import { useToast } from '@/hooks/use-toast';
 
 const signupSchema = z.object({
   fullName: z.string().min(1, { message: 'Full name is required.' }),
@@ -27,6 +29,8 @@ type SignupFormValues = z.infer<typeof signupSchema>;
 
 export default function SignupPage() {
   const router = useRouter();
+  const { signup } = useAuth();
+  const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
 
   const form = useForm<SignupFormValues>({
@@ -42,11 +46,27 @@ export default function SignupPage() {
 
   const onSubmit = async (data: SignupFormValues) => {
     setIsLoading(true);
-    // Mock API call
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    console.log(data);
-    setIsLoading(false);
-    router.push('/overview');
+    try {
+      await signup({
+        email: data.email,
+        full_name: data.fullName,
+        password: data.password,
+      });
+      toast({
+        title: "Account Created",
+        description: "Welcome to ATLAS SOC Dashboard",
+      });
+      router.push('/overview');
+    } catch (error: any) {
+      console.error("Signup failed:", error);
+      toast({
+        variant: "destructive",
+        title: "Signup Failed",
+        description: error.message || "Failed to create account. Please try again.",
+      });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (

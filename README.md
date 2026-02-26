@@ -93,10 +93,10 @@ This frontend is designed to be backend-agnostic. It uses a **proxy pattern** th
 The most important step is to tell the frontend where your backend is located.
 
 1.  Open the `.env` file in the root of the project.
-2.  Set the `ATLAS_BACKEND_URL` variable to the URL of your running backend server.
+2.  Set the `NEXT_PUBLIC_ATLAS_BACKEND_URL` variable to the URL of your running backend server.
 
     ```
-    ATLAS_BACKEND_URL=http://localhost:8000
+    NEXT_PUBLIC_ATLAS_BACKEND_URL=http://localhost:8000
     ```
 
 ### Step 2: Review the API Proxy Routes
@@ -107,7 +107,7 @@ The frontend components **do not** fetch data directly from your backend. Instea
 
 -   The page component `src/app/(dashboard)/overview/page.tsx` makes a `fetch` call to `/api/overview`.
 -   The API route `src/app/api/overview/route.ts` receives this request.
--   This route then makes a server-to-server request to `{ATLAS_BACKEND_URL}/overview`.
+-   This route then makes a server-to-server request to `{NEXT_PUBLIC_ATLAS_BACKEND_URL}/overview`.
 -   It forwards the response (or an error) back to the frontend component.
 
 ```typescript
@@ -119,7 +119,7 @@ export async function GET(request: Request) {
   const {searchParams} = new URL(request.url);
   const env = searchParams.get('env') || 'cloud';
 
-  const backendUrl = `${process.env.ATLAS_BACKEND_URL}/overview?env=${env}`;
+  const backendUrl = `${process.env.NEXT_PUBLIC_ATLAS_BACKEND_URL}/overview?env=${env}`;
 
   try {
     const response = await fetch(backendUrl);
@@ -169,7 +169,7 @@ export async function POST(request: Request) {
   // 1. Get the auth token (from a cookie, for example)
   // const token = cookies().get('auth_token')?.value;
 
-  const backendUrl = `${process.env.ATLAS_BACKEND_URL}/incidents/remediate`;
+  const backendUrl = `${process.env.NEXT_PUBLIC_ATLAS_BACKEND_URL}/incidents/remediate`;
 
   const response = await fetch(backendUrl, {
     method: 'POST',

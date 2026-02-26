@@ -12,6 +12,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { AuthCard } from '@/components/auth/auth-card';
 import { LoaderCircle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/context/AuthContext';
 
 const forgotPasswordSchema = z.object({
   email: z.string().email({ message: 'Please enter a valid email address.' }),
@@ -22,6 +23,7 @@ type ForgotPasswordFormValues = z.infer<typeof forgotPasswordSchema>;
 export default function ForgotPasswordPage() {
   const router = useRouter();
   const { toast } = useToast();
+  const { forgotPassword } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
 
   const form = useForm<ForgotPasswordFormValues>({
@@ -33,15 +35,23 @@ export default function ForgotPasswordPage() {
 
   const onSubmit = async (data: ForgotPasswordFormValues) => {
     setIsLoading(true);
-    // Mock API call
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    console.log(data);
-    setIsLoading(false);
-    toast({
+    try {
+      await forgotPassword(data.email);
+      toast({
         title: "Password Reset Link Sent",
         description: "If an account exists with that email, a reset link has been sent.",
-    });
-    router.push('/login');
+      });
+      router.push('/login');
+    } catch (error: any) {
+      console.error("Forgot password request failed:", error);
+      toast({
+        variant: "destructive",
+        title: "Request Failed",
+        description: error.message || "Failed to send reset link. Please try again.",
+      });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (

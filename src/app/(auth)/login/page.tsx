@@ -11,6 +11,8 @@ import { Input } from '@/components/ui/input';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { AuthCard } from '@/components/auth/auth-card';
 import { LoaderCircle } from 'lucide-react';
+import { useAuth } from '@/context/AuthContext';
+import { useToast } from '@/hooks/use-toast';
 
 const loginSchema = z.object({
   email: z.string().email({ message: 'Please enter a valid email address.' }),
@@ -21,6 +23,8 @@ type LoginFormValues = z.infer<typeof loginSchema>;
 
 export default function LoginPage() {
   const router = useRouter();
+  const { login } = useAuth();
+  const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
 
   const form = useForm<LoginFormValues>({
@@ -33,11 +37,23 @@ export default function LoginPage() {
 
   const onSubmit = async (data: LoginFormValues) => {
     setIsLoading(true);
-    // Mock API call
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    console.log(data);
-    setIsLoading(false);
-    router.push('/overview');
+    try {
+      await login(data.email, data.password);
+      toast({
+        title: "Login Successful",
+        description: "Welcome to ATLAS SOC Dashboard",
+      });
+      router.push('/overview');
+    } catch (error: any) {
+      console.error("Login failed:", error);
+      toast({
+        variant: "destructive",
+        title: "Login Failed",
+        description: error.message || "Invalid credentials. Please try again.",
+      });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (

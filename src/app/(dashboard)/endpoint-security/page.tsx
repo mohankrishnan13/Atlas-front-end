@@ -95,7 +95,15 @@ export default function EndpointSecurityPage() {
         const fetchData = async () => {
             setIsLoading(true);
             try {
-                const response = await fetch(`/api/endpoint-security?env=${environment}`);
+                const token = localStorage.getItem('atlas_token');
+                const headers: Record<string, string> = {};
+                if (token) {
+                    headers['Authorization'] = `Bearer ${token}`;
+                }
+                
+                const response = await fetch(`/api/endpoint-security?env=${environment}`, {
+                    headers,
+                });
                 if (!response.ok) {
                     const errorData = await response.json().catch(() => ({ message: 'An unknown API error occurred.' }));
                     throw new Error(errorData.details || errorData.message || `API call failed with status: ${response.status}`);
@@ -119,9 +127,17 @@ export default function EndpointSecurityPage() {
 
     const handleQuarantine = async (workstationId: string) => {
         try {
+            const token = localStorage.getItem('atlas_token');
+            const headers: Record<string, string> = {
+                'Content-Type': 'application/json',
+            };
+            if (token) {
+                headers['Authorization'] = `Bearer ${token}`;
+            }
+            
             const response = await fetch('/api/endpoint-security/quarantine', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers,
                 body: JSON.stringify({ workstationId }),
             });
 

@@ -15,7 +15,7 @@ import {
   ChartLegendContent,
 } from "@/components/ui/chart"
 import { Area, AreaChart, Line, LineChart as RechartsLineChart, Tooltip as RechartsTooltip, BarChart, Bar, CartesianGrid, XAxis, YAxis } from "recharts"
-import { Tooltip, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { Tooltip, TooltipProvider, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 
 // --- MOCK DATA ---
 const appHealthData: AppHealth[] = [

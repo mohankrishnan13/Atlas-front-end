@@ -33,11 +33,27 @@ export type HeaderData = {
     recentAlerts: RecentAlert[];
 };
 
+export type TimeSeriesData = {
+    name: string;
+    [key: string]: number | string;
+};
 
-// Overview Page
-export type AppAnomaly = {
+// --- Overview Page (New Types) ---
+export type AppHealth = {
+  id: string;
   name: string;
-  anomalies: number;
+  status: 'Healthy' | 'Warning' | 'Critical';
+  statusText?: string;
+  trafficData: TimeSeriesData[];
+};
+
+export type ThreatAnomaly = {
+    id: string;
+    severity: Severity;
+    target: string;
+    assignee?: string;
+    issue: string;
+    timestamp: string;
 };
 
 export type Microservice = {
@@ -48,29 +64,10 @@ export type Microservice = {
     connections: string[];
 };
 
-export type TimeSeriesData = {
-    name: string;
-    [key: string]: number | string;
-};
-
-export type SystemAnomaly = {
-    id: string;
-    service: string;
-    type: string;
-    severity: Severity;
-    timestamp: string;
-};
-
 export type OverviewData = {
-    apiRequests: number;
-    errorRate: number;
-    activeAlerts: number;
-    costRisk: number;
-    appAnomalies: AppAnomaly[];
+    appHealth: AppHealth[];
+    threatAnomalies: ThreatAnomaly[];
     microservices: Microservice[];
-    failingEndpoints: Record<string, string>;
-    apiRequestsChart: TimeSeriesData[];
-    systemAnomalies: SystemAnomaly[];
 };
 
 

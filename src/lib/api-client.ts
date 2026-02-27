@@ -2,9 +2,16 @@ import type { OverviewData, ApiMonitoringData, NetworkTrafficData, EndpointSecur
 
 const API_URL = process.env.NEXT_PUBLIC_ATLAS_BACKEND_URL || "http://localhost:8000";
 
-export interface ApiError extends Error {
+export class ApiError extends Error {
   status?: number;
   details?: any;
+
+  constructor(message: string, status?: number, details?: any) {
+    super(message);
+    this.name = 'ApiError';
+    this.status = status;
+    this.details = details;
+  }
 }
 
 export class AtlasApiClient {
@@ -50,17 +57,16 @@ export class AtlasApiClient {
         localStorage.removeItem('atlas_user');
         window.location.href = '/login';
         // Throw an error to prevent further processing
-        const error = new Error("Session expired. Please log in again.") as ApiError;
-        error.status = 401;
-        throw error;
+        throw new ApiError("Session expired. Please log in again.", 401);
       }
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({ detail: "Request failed with status " + response.status }));
-        const error = new Error(errorData.detail || `Request failed`) as ApiError;
-        error.status = response.status;
-        error.details = errorData;
-        throw error;
+        throw new ApiError(
+          errorData.detail || `Request failed`,
+          response.status,
+          errorData
+        );
       }
 
       if (response.status === 204) {
@@ -73,7 +79,7 @@ export class AtlasApiClient {
             throw error;
         }
         console.error("Network or fetch error:", error);
-        throw new Error("Network error or backend is unavailable. Please check if the backend server is running.");
+        throw new ApiError("Network error or backend is unavailable. Please check if the backend server is running.", 503, { detail: (error as Error).message });
     }
   }
 
@@ -86,7 +92,6 @@ export class AtlasApiClient {
       full_name: string;
     }>("/api/auth/login", {
       method: "POST",
-      body: JSON.stringify({ username: email, password: password }),
       headers: { 'Content-Type': 'application/x-www-form-urlencoded'},
       // FastAPI's OAuth2PasswordRequestForm expects form data
       body: new URLSearchParams({

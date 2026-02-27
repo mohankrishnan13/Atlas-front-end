@@ -117,43 +117,43 @@ export class AtlasApiClient {
 
   // Dashboard endpoints
   async getOverview(env: string) {
-    return this.makeRequest<OverviewData>(`/api/v1/dashboard/overview?env=${env}`);
+    return this.makeRequest<OverviewData>(`/api/dashboard/overview?env=${env}`);
   }
 
   async getApiMonitoring(env: string) {
-    return this.makeRequest<ApiMonitoringData>(`/api/v1/dashboard/api-monitoring?env=${env}`);
+    return this.makeRequest<ApiMonitoringData>(`/api/dashboard/api-monitoring?env=${env}`);
   }
 
   async getNetworkTraffic(env: string) {
-    return this.makeRequest<NetworkTrafficData>(`/api/v1/dashboard/network-traffic?env=${env}`);
+    return this.makeRequest<NetworkTrafficData>(`/api/metrics/network?env=${env}`);
   }
 
   async getEndpointSecurity(env: string) {
-    return this.makeRequest<EndpointSecurityData>(`/api/v1/dashboard/endpoint-security?env=${env}`);
+    return this.makeRequest<EndpointSecurityData>(`/api/dashboard/endpoint-security?env=${env}`);
   }
 
   async getDbMonitoring(env: string) {
-    return this.makeRequest<DbMonitoringData>(`/api/v1/dashboard/db-monitoring?env=${env}`);
+    return this.makeRequest<DbMonitoringData>(`/api/dashboard/db-monitoring?env=${env}`);
   }
 
   async getIncidents(env: string) {
-    return this.makeRequest<Incident[]>(`/api/v1/dashboard/incidents?env=${env}`);
+    return this.makeRequest<Incident[]>(`/api/dashboard/incidents?env=${env}`);
   }
   
   async getHeaderData(env: string) {
-    return this.makeRequest<HeaderData>(`/api/v1/dashboard/header-data?env=${env}`);
+    return this.makeRequest<HeaderData>(`/api/dashboard/header-data?env=${env}`);
   }
 
   // Incident Actions
   async remediateIncident(incidentId: string, action: string) {
-    return this.makeRequest(`/api/v1/incidents/remediate`, {
+    return this.makeRequest(`/api/incidents/remediate`, {
       method: 'POST',
       body: JSON.stringify({ incidentId, action }),
     });
   }
 
   async quarantineDevice(workstationId: string) {
-    return this.makeRequest(`/api/v1/endpoints/quarantine`, {
+    return this.makeRequest(`/api/endpoints/quarantine`, {
         method: 'POST',
         body: JSON.stringify({ workstationId }),
     });
@@ -161,52 +161,52 @@ export class AtlasApiClient {
 
   // Profile Page
   async getProfile() {
-    return this.makeRequest<UserProfile>("/api/v1/profile/me");
+    return this.makeRequest<UserProfile>("/api/profile/me");
   }
 
   async updateProfile(data: Partial<UserProfile>) {
-    return this.makeRequest<UserProfile>('/api/v1/profile/me', {
+    return this.makeRequest<UserProfile>('/api/profile/me', {
         method: 'PUT',
         body: JSON.stringify(data),
     });
   }
 
   async updatePassword(data: { current_password: string, new_password: string }) {
-    return this.makeRequest('/api/v1/profile/password', {
+    return this.makeRequest('/api/profile/password', {
         method: 'PUT',
         body: JSON.stringify(data),
     });
   }
 
   async getProfileActivity() {
-      return this.makeRequest<AccountActivity[]>('/api/v1/profile/activity');
+      return this.makeRequest<AccountActivity[]>('/api/profile/activity');
   }
 
   // Settings Page
   async getUsers() {
-      return this.makeRequest<TeamUser[]>('/api/v1/users');
+      return this.makeRequest<TeamUser[]>('/api/users');
   }
 
   async createUser(data: { name: string, email: string, role: string }) {
-      return this.makeRequest<TeamUser>('/api/v1/users', {
+      return this.makeRequest<TeamUser>('/api/users', {
           method: 'POST',
           body: JSON.stringify(data),
       });
   }
 
   async deleteUser(userId: number) {
-      return this.makeRequest(`/api/v1/users/${userId}`, {
+      return this.makeRequest(`/api/users/${userId}`, {
           method: 'DELETE',
       });
   }
 
   // Reports Page
   async getScheduledReports() {
-      return this.makeRequest<ScheduledReport[]>('/api/v1/reports/scheduled');
+      return this.makeRequest<ScheduledReport[]>('/api/reports/scheduled');
   }
 
   async getRecentDownloads() {
-      return this.makeRequest<RecentDownload[]>('/api/v1/reports/downloads');
+      return this.makeRequest<RecentDownload[]>('/api/reports/downloads');
   }
 }
 

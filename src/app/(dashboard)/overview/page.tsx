@@ -9,10 +9,13 @@ import { cn, getSeverityClassNames } from "@/lib/utils";
 import type { Severity, Microservice, AppHealth, ThreatAnomaly } from "@/lib/types";
 import {
   ChartContainer,
+  ChartTooltip,
   ChartTooltipContent,
+  ChartLegend,
+  ChartLegendContent,
 } from "@/components/ui/chart"
-import { Line, LineChart as RechartsLineChart, Tooltip as RechartsTooltip, BarChart, Bar } from "recharts"
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { Area, AreaChart, Line, LineChart as RechartsLineChart, Tooltip as RechartsTooltip, BarChart, Bar, CartesianGrid, XAxis, YAxis } from "recharts"
+import { Tooltip, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 // --- MOCK DATA ---
 const appHealthData: AppHealth[] = [
@@ -57,14 +60,15 @@ const threatsData: ThreatAnomaly[] = [
   {
     id: 'threat-1',
     severity: 'Critical',
-    target: 'GenAI Service',
+    target: '[GenAI Service]',
+    assignee: 'AI System',
     issue: 'Massive spike in API consumption from external IP. Cost threshold exceeded.',
     timestamp: '2m ago'
   },
   {
     id: 'threat-2',
     severity: 'High',
-    target: 'LAPTOP-DEV-09',
+    target: '[LAPTOP-DEV-09]',
     assignee: 'Sarah Jenkins',
     issue: 'Multiple failed SSH login attempts detected on the local network.',
     timestamp: '8m ago'
@@ -72,7 +76,7 @@ const threatsData: ThreatAnomaly[] = [
    {
     id: 'threat-3',
     severity: 'High',
-    target: 'MAC-HR-02',
+    target: '[MAC-HR-02]',
     assignee: 'David Chen',
     issue: 'Firewall disabled by user via local settings.',
     timestamp: '25m ago'
@@ -85,13 +89,30 @@ const topologyData: Microservice[] = [
   { id: 'flipkart', name: 'Flipkart Portal', status: 'Healthy', position: { top: '70%', left: '80%' }, connections: [] },
 ];
 
+const apiRequestsData = [
+  { time: '12 AM', naukri: 4000, genai: 2400, flipkart: 2400 },
+  { time: '3 AM', naukri: 3000, genai: 1398, flipkart: 2210 },
+  { time: '6 AM', naukri: 2000, genai: 9800, flipkart: 2290 },
+  { time: '9 AM', naukri: 2780, genai: 3908, flipkart: 2000 },
+  { time: '12 PM', naukri: 1890, genai: 4800, flipkart: 2181 },
+  { time: '3 PM', naukri: 2390, genai: 3800, flipkart: 2500 },
+  { time: '6 PM', naukri: 3490, genai: 4300, flipkart: 2100 },
+];
+
 // --- COMPONENTS ---
 
-const chartConfig = {
+const chartConfigLine = {
   requests: {
     label: "Requests",
   },
 };
+
+const chartConfigArea = {
+  naukri: { label: "Naukri", color: "hsl(var(--chart-3))" },
+  genai: { label: "GenAI", color: "hsl(var(--chart-5))" },
+  flipkart: { label: "Flipkart", color: "hsl(var(--chart-2))" },
+};
+
 
 function AppHealthCard({ app }: { app: AppHealth }) {
   const StatusIndicator = () => {
@@ -126,7 +147,7 @@ function AppHealthCard({ app }: { app: AppHealth }) {
         )}
       </CardHeader>
       <CardContent className="h-20 -m-4">
-        <ChartContainer config={chartConfig} className="h-full w-full">
+        <ChartContainer config={chartConfigLine} className="h-full w-full">
           <RechartsLineChart data={app.trafficData}>
             <RechartsTooltip
               content={<ChartTooltipContent indicator="dot" hideLabel />}
@@ -210,7 +231,7 @@ function ActiveThreatsFeed({ anomalies }: { anomalies: ThreatAnomaly[] }) {
                                         </Badge>
                                     </TableCell>
                                     <TableCell>
-                                      <div className="font-medium">[{anomaly.target}]</div>
+                                      <div className="font-medium">{anomaly.target}</div>
                                       {anomaly.assignee && <div className="text-sm text-muted-foreground">Assigned: {anomaly.assignee}</div>}
                                     </TableCell>
                                     <TableCell>{anomaly.issue}</TableCell>
@@ -230,6 +251,46 @@ function ActiveThreatsFeed({ anomalies }: { anomalies: ThreatAnomaly[] }) {
     )
 }
 
+function ApiRequestsChart() {
+    return (
+        <Card className="col-span-1 md:col-span-2 xl:col-span-2 flex flex-col">
+            <CardHeader>
+                <CardTitle>API Requests Over Time</CardTitle>
+                <CardDescription>Breakdown of API consumption by application.</CardDescription>
+            </CardHeader>
+            <CardContent>
+                <ChartContainer config={chartConfigArea} className="h-64 w-full">
+                    <AreaChart
+                        data={apiRequestsData}
+                        margin={{ left: -20, top: 10, right: 10 }}
+                    >
+                        <CartesianGrid vertical={false} strokeDasharray="3 3" stroke="hsl(var(--border) / 0.5)"/>
+                        <XAxis
+                            dataKey="time"
+                            tickLine={false}
+                            axisLine={false}
+                            tickMargin={8}
+                            tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 12 }}
+                        />
+                        <YAxis
+                            tickLine={false}
+                            axisLine={false}
+                            tickMargin={8}
+                            tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 12 }}
+                            tickFormatter={(value) => `${Number(value) / 1000}k`}
+                        />
+                        <ChartTooltip content={<ChartTooltipContent indicator="dot" />} />
+                        <ChartLegend content={<ChartLegendContent />} />
+                        <Area dataKey="naukri" type="natural" fill="var(--color-naukri)" fillOpacity={0.1} stroke="var(--color-naukri)" stackId="a" />
+                        <Area dataKey="genai" type="natural" fill="var(--color-genai)" fillOpacity={0.1} stroke="var(--color-genai)" stackId="a" />
+                        <Area dataKey="flipkart" type="natural" fill="var(--color-flipkart)" fillOpacity={0.1} stroke="var(--color-flipkart)" stackId="a" />
+                    </AreaChart>
+                </ChartContainer>
+            </CardContent>
+        </Card>
+    );
+}
+
 export default function OverviewPage() {
     return (
         <div className="space-y-8">
@@ -238,15 +299,7 @@ export default function OverviewPage() {
             </div>
             <div className="grid grid-cols-1 xl:grid-cols-5 gap-4">
                  <MicroservicesTopology services={topologyData} />
-                 <Card className="col-span-1 md:col-span-2 xl:col-span-2 flex flex-col">
-                    <CardHeader>
-                        <CardTitle>Additional Metrics</CardTitle>
-                        <CardDescription>Further system insights will be displayed here.</CardDescription>
-                    </CardHeader>
-                    <CardContent className="flex-1 flex items-center justify-center">
-                        <p className="text-muted-foreground">Chart placeholder</p>
-                    </CardContent>
-                 </Card>
+                 <ApiRequestsChart />
             </div>
             <div className="grid grid-cols-1 xl:grid-cols-5 gap-4">
                  <ActiveThreatsFeed anomalies={threatsData} />

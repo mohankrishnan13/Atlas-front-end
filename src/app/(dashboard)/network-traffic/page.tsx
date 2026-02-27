@@ -7,7 +7,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { Gauge, Users, XCircle, ArrowRight } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
-import type { NetworkTrafficData } from "@/lib/types";
+import type { NetworkTrafficData, NetworkAnomaly } from "@/lib/types";
 import { useToast } from "@/hooks/use-toast";
 import { useEnvironment } from "@/context/EnvironmentContext";
 import { apiClient, ApiError } from "@/lib/api-client";
@@ -73,9 +73,9 @@ function TrafficFlowMap({ isLoading, environment }: { isLoading: boolean, enviro
                     <ArrowRight className="h-8 w-8 text-muted-foreground mx-4" />
                     <div className="space-y-4">
                         <div className="font-bold text-muted-foreground text-center">{isLocal ? "Internal Resources" : "Internal App Nodes"}</div>
-                        <div className="p-4 bg-secondary rounded-lg">{isLocal ? "10.0.50.5 [HR-DB]" : "10.0.1.12 [Payment-Service]"}</div>
-                        <div className="p-4 bg-secondary rounded-lg">{isLocal ? "10.0.60.10 [File-Server]" : "10.0.2.34 [User-DB]"}</div>
-                        <div className="p-4 bg-secondary rounded-lg">{isLocal ? "10.0.70.15 [Intranet-Portal]" : "10.0.5.88 [Data-Pipeline]"}</div>
+                        <div className="p-4 bg-secondary rounded-lg">{isLocal ? "10.0.50.5 [HR-DB]" : "Naukri-Cluster"}</div>
+                        <div className="p-4 bg-secondary rounded-lg">{isLocal ? "10.0.60.10 [File-Server]" : "GenAI-Inference-Node"}</div>
+                        <div className="p-4 bg-secondary rounded-lg">{isLocal ? "10.0.70.15 [Intranet-Portal]" : "Flipkart-Web"}</div>
                     </div>
                 </>}
             </CardContent>
@@ -93,8 +93,17 @@ export default function NetworkTrafficPage() {
         const fetchData = async () => {
             setIsLoading(true);
             try {
+                // This is a placeholder; in a real app this would be part of the API response
+                const mockAnomalies: NetworkAnomaly[] = [
+                    { id: 1, sourceEndpoint: 'LAPTOP-HR-02 (David)', targetApp: 'Naukri DB', port: 5432, type: 'Unusual Data Access' },
+                    { id: 2, sourceEndpoint: '203.0.113.54', targetApp: 'GenAI-Inference-Node', port: 443, type: 'DDoS Attempt' },
+                    { id: 3, sourceEndpoint: 'SERVER-CI-04', targetApp: 'Flipkart-Web', port: 8080, type: 'Anomalous Port Scan' }
+                ];
+                
                 const result = await apiClient.getNetworkTraffic(environment);
-                setData(result);
+                
+                // Merge mock data with API response for demonstration
+                setData({ ...result, networkAnomalies: mockAnomalies });
             } catch (error: any) {
                 console.error("Failed to fetch network traffic data:", error);
                 const errorMessage = error instanceof ApiError ? error.message : "An unexpected error occurred.";
@@ -130,8 +139,7 @@ export default function NetworkTrafficPage() {
                     <Table>
                         <TableHeader>
                             <TableRow>
-                                <TableHead>Source IP</TableHead>
-                                <TableHead>Destination IP</TableHead>
+                                <TableHead>Source Endpoint</TableHead>
                                 <TableHead>Target Application</TableHead>
                                 <TableHead>Port</TableHead>
                                 <TableHead>Anomaly Type</TableHead>
@@ -140,15 +148,14 @@ export default function NetworkTrafficPage() {
                         <TableBody>
                             {isLoading && Array.from({length: 4}).map((_, i) => (
                                 <TableRow key={i}>
-                                    <TableCell colSpan={5}><Skeleton className="h-6 w-full" /></TableCell>
+                                    <TableCell colSpan={4}><Skeleton className="h-6 w-full" /></TableCell>
                                 </TableRow>
                             ))}
                             {!isLoading && data?.networkAnomalies.map((anomaly) => (
                                 <TableRow key={anomaly.id}>
-                                    <TableCell className="font-mono">{anomaly.sourceIp}</TableCell>
-                                    <TableCell className="font-mono">{anomaly.destIp}</TableCell>
+                                    <TableCell className="font-mono">{anomaly.sourceEndpoint}</TableCell>
                                     <TableCell>
-                                        <Badge variant="outline">{anomaly.app}</Badge>
+                                        <Badge variant="outline">{anomaly.targetApp}</Badge>
                                     </TableCell>
                                     <TableCell>{anomaly.port}</TableCell>
                                     <TableCell>
@@ -158,7 +165,7 @@ export default function NetworkTrafficPage() {
                             ))}
                              {!isLoading && (!data || data.networkAnomalies.length === 0) && (
                                 <TableRow>
-                                    <TableCell colSpan={5} className="text-center text-muted-foreground">No network anomalies detected.</TableCell>
+                                    <TableCell colSpan={4} className="text-center text-muted-foreground">No network anomalies detected.</TableCell>
                                 </TableRow>
                             )}
                         </TableBody>

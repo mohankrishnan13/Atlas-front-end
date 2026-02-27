@@ -26,10 +26,41 @@ type Tab = 'general' | 'alert-tuning' | 'containment' | 'ml-baselines' | 'user-a
 const navItems = [
   { id: 'general', label: 'General', icon: Cog },
   { id: 'alert-tuning', label: 'Alert Tuning', icon: SlidersHorizontal },
-  { id: 'containment', label: 'Progressive Containment', icon: Shield },
+  { id: 'containment', label: 'Containment', icon: Shield },
   { id: 'ml-baselines', label: 'ML Baselines', icon: BrainCircuit },
   { id: 'user-access', label: 'User Access', icon: Users },
 ];
+
+const mockAppSettings = {
+    global: {
+        criticalThreshold: 85,
+        warningThreshold: 60,
+        softLimit: 300,
+        hardBlock: 1000,
+        accumulationWindow: 7,
+    },
+    naukri: {
+        criticalThreshold: 90,
+        warningThreshold: 70,
+        softLimit: 500,
+        hardBlock: 2000,
+        accumulationWindow: 5,
+    },
+    genai: {
+        criticalThreshold: 80,
+        warningThreshold: 55,
+        softLimit: 150,
+        hardBlock: 100, // as per request
+        accumulationWindow: 3,
+    },
+    flipkart: {
+        criticalThreshold: 95,
+        warningThreshold: 75,
+        softLimit: 1000,
+        hardBlock: 5000, // as per request
+        accumulationWindow: 14,
+    }
+}
 
 
 function UserAccessTab() {
@@ -189,22 +220,35 @@ function UserAccessTab() {
 
 export default function SettingsPage() {
   const [activeTab, setActiveTab] = useState<Tab>('general');
-
+  const [selectedApp, setSelectedApp] = useState('global');
+  
   // State for interactive elements
   const [systemName, setSystemName] = useState('ATLAS | Enterprise Anomaly Monitoring System');
   const [timezone, setTimezone] = useState('utc');
   const [retention, setRetention] = useState(90);
-  const [criticalThreshold, setCriticalThreshold] = useState([85]);
-  const [warningThreshold, setWarningThreshold] = useState([60]);
+
+  // App-specific settings
+  const [criticalThreshold, setCriticalThreshold] = useState([mockAppSettings.global.criticalThreshold]);
+  const [warningThreshold, setWarningThreshold] = useState([mockAppSettings.global.warningThreshold]);
+  const [softLimit, setSoftLimit] = useState([mockAppSettings.global.softLimit]);
+  const [hardBlock, setHardBlock] = useState([mockAppSettings.global.hardBlock]);
+  const [accumulationWindow, setAccumulationWindow] = useState([mockAppSettings.global.accumulationWindow]);
+
   const [emailAlerts, setEmailAlerts] = useState(true);
-  const [softLimit, setSoftLimit] = useState([300]);
-  const [hardBlock, setHardBlock] = useState([1000]);
-  const [accumulationWindow, setAccumulationWindow] = useState([7]);
   const [autoDismiss, setAutoDismiss] = useState(true);
   const [enableML, setEnableML] = useState(true);
   const [autoQuarantine, setAutoQuarantine] = useState(false);
   const [trainingWindow, setTrainingWindow] = useState(30);
   const [modelSensitivity, setModelSensitivity] = useState('balanced');
+
+  useEffect(() => {
+    const newSettings = mockAppSettings[selectedApp as keyof typeof mockAppSettings] || mockAppSettings.global;
+    setCriticalThreshold([newSettings.criticalThreshold]);
+    setWarningThreshold([newSettings.warningThreshold]);
+    setSoftLimit([newSettings.softLimit]);
+    setHardBlock([newSettings.hardBlock]);
+    setAccumulationWindow([newSettings.accumulationWindow]);
+  }, [selectedApp]);
 
 
   const renderContent = () => {
@@ -348,6 +392,8 @@ export default function SettingsPage() {
     }
   };
 
+  const showAppContext = activeTab === 'alert-tuning' || activeTab === 'containment';
+
   return (
     <div className="space-y-8">
       <h1 className="text-3xl font-bold">Settings</h1>
@@ -374,8 +420,24 @@ export default function SettingsPage() {
           </nav>
         </aside>
 
-        <main>
-          {renderContent()}
+        <main className="space-y-6">
+            {showAppContext && (
+                <div className="w-full max-w-sm">
+                    <Label htmlFor="app-context" className="text-xs text-muted-foreground">Application Context</Label>
+                    <Select value={selectedApp} onValueChange={setSelectedApp}>
+                        <SelectTrigger id="app-context" className="mt-1">
+                            <SelectValue placeholder="Select an application..." />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="global">Global Defaults</SelectItem>
+                            <SelectItem value="naukri">Naukri (Prod)</SelectItem>
+                            <SelectItem value="genai">GenAI Service</SelectItem>
+                            <SelectItem value="flipkart">Flipkart Internal</SelectItem>
+                        </SelectContent>
+                    </Select>
+                </div>
+            )}
+            {renderContent()}
         </main>
       </div>
     </div>

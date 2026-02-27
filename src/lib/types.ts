@@ -94,9 +94,8 @@ export type ApiMonitoringData = {
 // Network Traffic Page
 export type NetworkAnomaly = {
     id: number;
-    sourceIp: string;
-    destIp: string;
-    app: string;
+    sourceEndpoint: string;
+    targetApp: string;
     port: number;
     type: string;
 };

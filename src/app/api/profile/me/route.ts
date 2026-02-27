@@ -2,30 +2,39 @@ import { NextResponse } from 'next/server';
 
 const API_URL = process.env.NEXT_PUBLIC_ATLAS_BACKEND_URL || 'http://localhost:8000';
 
-async function forwardRequest(request: Request) {
-  const headers = new Headers(request.headers);
-  const url = `${API_URL}/api/profile/me`;
+async function handler(request: Request) {
+  try {
+    const headers: Record<string, string> = {};
+    const authHeader = request.headers.get('authorization');
+    if (authHeader) {
+      headers['Authorization'] = authHeader;
+    }
 
-  const response = await fetch(url, {
-    method: request.method,
-    headers: headers,
-    body: request.method !== 'GET' ? request.body : null,
-  });
+    if (request.method === 'PUT') {
+        headers['Content-Type'] = 'application/json';
+    }
 
-  const data = await response.text();
-  
-  return new NextResponse(data, {
-    status: response.status,
-    headers: {
-      'Content-Type': response.headers.get('Content-Type') || 'application/json',
-    },
-  });
+    const url = `${API_URL}/api/profile/me`;
+
+    const response = await fetch(url, {
+      method: request.method,
+      headers: headers,
+      body: request.method === 'PUT' ? request.body : null,
+      cache: 'no-store',
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      return NextResponse.json({ error: data.detail || 'Backend error' }, { status: response.status });
+    }
+    
+    return NextResponse.json(data);
+
+  } catch (error) {
+    console.error('API proxy error for /api/profile/me:', error);
+    return NextResponse.json({ error: 'Failed to connect to backend' }, { status: 503 });
+  }
 }
 
-export async function GET(request: Request) {
-  return forwardRequest(request);
-}
-
-export async function PUT(request: Request) {
-  return forwardRequest(request);
-}
+export { handler as GET, handler as PUT };

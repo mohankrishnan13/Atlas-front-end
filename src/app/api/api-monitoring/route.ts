@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 
 const API_URL = process.env.NEXT_PUBLIC_ATLAS_BACKEND_URL || 'http://localhost:8000';
-console.log(API_URL,"API_URL")
+
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
@@ -15,6 +15,7 @@ export async function GET(request: Request) {
 
     const response = await fetch(`${API_URL}/api/v1/dashboard/api-monitoring?env=${env}`, {
       headers,
+      cache: 'no-store',
     });
 
     if (!response.ok) {

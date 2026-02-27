@@ -15,6 +15,7 @@ export async function GET(request: Request) {
 
     const response = await fetch(`${API_URL}/api/v1/dashboard/network-traffic?env=${env}`, {
       headers,
+      cache: 'no-store',
     });
 
     if (!response.ok) {

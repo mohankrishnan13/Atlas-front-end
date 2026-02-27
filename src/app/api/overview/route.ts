@@ -7,7 +7,6 @@ export async function GET(request: Request) {
     const { searchParams } = new URL(request.url);
     const env = searchParams.get('env') || 'cloud';
 
-    // Forward the request to the backend with authentication
     const headers: Record<string, string> = {};
     const authHeader = request.headers.get('authorization');
     if (authHeader) {
@@ -16,6 +15,7 @@ export async function GET(request: Request) {
 
     const response = await fetch(`${API_URL}/api/v1/dashboard/overview?env=${env}`, {
       headers,
+      cache: 'no-store',
     });
 
     if (!response.ok) {

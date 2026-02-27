@@ -36,11 +36,12 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { cn, getSeverityClassNames } from '@/lib/utils';
 import { Badge } from '../ui/badge';
-import type { RecentAlert, User as UserType, Application } from '@/lib/types';
+import type { RecentAlert, User as UserType, Application, HeaderData } from '@/lib/types';
 import { Skeleton } from '../ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
 import { useEnvironment } from '@/context/EnvironmentContext';
 import { useAuth } from '@/context/AuthContext';
+import { apiClient, ApiError } from '@/lib/api-client';
 
 function AlertItem({ alert }: { alert: RecentAlert }) {
   const severityClasses = getSeverityClassNames(alert.severity);
@@ -66,43 +67,27 @@ function AlertItem({ alert }: { alert: RecentAlert }) {
   );
 }
 
-type HeaderData = {
-  user: UserType;
-  recentAlerts: RecentAlert[];
-  applications: Application[];
-};
-
 export function DashboardHeader() {
   const [data, setData] = useState<HeaderData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const { toast } = useToast();
   const { environment, setEnvironment } = useEnvironment();
-  const { user, logout } = useAuth();
+  const { user: authUser, logout } = useAuth();
   const router = useRouter();
 
   useEffect(() => {
     async function fetchData() {
       setIsLoading(true);
       try {
-        const res = await fetch(`/api/header-data?env=${environment}`);
-        if (!res.ok) {
-          const errorData = await res
-            .json()
-            .catch(() => ({ message: 'An unknown API error occurred.' }));
-          throw new Error(
-            errorData.details ||
-              errorData.message ||
-              `API call failed with status: ${res.status}`
-          );
-        }
-        const result = await res.json();
+        const result = await apiClient.getHeaderData(environment);
         setData(result);
       } catch (error: any) {
         console.error('Failed to fetch header data', error);
+        const errorMessage = error instanceof ApiError ? error.message : "An unexpected error occurred.";
         toast({
           variant: 'destructive',
           title: 'Failed to Load Header Data',
-          description: error.message,
+          description: errorMessage,
         });
         setData(null);
       } finally {
@@ -115,6 +100,8 @@ export function DashboardHeader() {
   const handleLogout = () => {
     logout();
   };
+
+  const user = data?.user;
 
   return (
     <header className="sticky top-0 z-30 hidden h-16 items-center justify-between border-b border-slate-800 bg-background px-4 text-slate-200 md:flex md:px-6">
@@ -195,17 +182,17 @@ export function DashboardHeader() {
               variant="ghost"
               className="relative h-10 w-10 rounded-full"
             >
-              {isLoading || !data?.user ? (
+              {isLoading || !user ? (
                 <Skeleton className="h-10 w-10 rounded-full" />
               ) : (
                 <Avatar className="h-10 w-10">
                   <AvatarImage
-                    src={user?.avatar || data?.user?.avatar}
-                    alt={user?.full_name || data?.user?.name}
+                    src={user.avatar}
+                    alt={user.name}
                     data-ai-hint="person face"
                   />
                   <AvatarFallback>
-                    {(user?.full_name || data?.user?.name || 'U')
+                    {(user.name || 'U')
                       .split(' ')
                       .map((n) => n[0])
                       .join('')}
@@ -218,10 +205,10 @@ export function DashboardHeader() {
             <DropdownMenuLabel className="font-normal">
               <div className="flex flex-col space-y-1">
                 <p className="text-sm font-medium leading-none">
-                  {user?.full_name || data?.user?.name || 'User'}
+                  {user?.name || 'User'}
                 </p>
                 <p className="text-xs leading-none text-muted-foreground">
-                  {user?.email || data?.user?.email || 'email@example.com'}
+                  {user?.email || 'email@example.com'}
                 </p>
               </div>
             </DropdownMenuLabel>

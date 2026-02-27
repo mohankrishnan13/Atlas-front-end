@@ -14,9 +14,10 @@ import { aiInvestigatorSummary, AiInvestigatorSummaryOutput, AiInvestigatorSumma
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useEnvironment } from '@/context/EnvironmentContext';
+import { apiClient, ApiError } from '@/lib/api-client';
 
 
-function IncidentDetailSheet({ incident, open, onOpenChange }: { incident: Incident | null, open: boolean, onOpenChange: (open: boolean) => void }) {
+function IncidentDetailSheet({ incident, open, onOpenChange, onIncidentUpdate }: { incident: Incident | null, open: boolean, onOpenChange: (open: boolean) => void, onIncidentUpdate: () => void }) {
     const { toast } = useToast();
     const [summary, setSummary] = useState<AiInvestigatorSummaryOutput | null>(null);
     const [isLoading, setIsLoading] = useState(false);
@@ -53,20 +54,13 @@ function IncidentDetailSheet({ incident, open, onOpenChange }: { incident: Incid
     const handleRemediation = async (action: string) => {
         if (!incident) return;
         try {
-            const response = await fetch('/api/incidents/remediate', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ incidentId: incident.id, action: action }),
-            });
-            if (!response.ok) {
-                const errorData = await response.json().catch(() => ({ message: 'Remediation action failed' }));
-                throw new Error(errorData.details || errorData.message);
-            }
+            await apiClient.remediateIncident(incident.id, action);
             toast({
                 title: `Action: ${action}`,
                 description: `Action taken for incident ${incident.id}`,
             });
             onOpenChange(false);
+            onIncidentUpdate(); // Re-fetch incidents
         } catch(error: any) {
              console.error(`Remediation action '${action}' failed:`, error);
              toast({
@@ -152,38 +146,27 @@ export default function IncidentsPage() {
     const { toast } = useToast();
     const { environment } = useEnvironment();
 
+    const fetchIncidents = async () => {
+        setIsLoading(true);
+        try {
+            const result = await apiClient.getIncidents(environment);
+            setIncidents(result);
+        } catch (error: any) {
+            console.error("Failed to fetch incidents:", error);
+            const errorMessage = error instanceof ApiError ? error.message : "An unexpected error occurred.";
+            toast({
+                variant: "destructive",
+                title: "Failed to Load Incidents Data",
+                description: errorMessage,
+            });
+            setIncidents([]);
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
     useEffect(() => {
-        const fetchData = async () => {
-            setIsLoading(true);
-            try {
-                const token = localStorage.getItem('atlas_token');
-                const headers: Record<string, string> = {};
-                if (token) {
-                    headers['Authorization'] = `Bearer ${token}`;
-                }
-                
-                const response = await fetch(`/api/incidents?env=${environment}`, {
-                    headers,
-                });
-                if (!response.ok) {
-                    const errorData = await response.json().catch(() => ({ message: 'An unknown API error occurred.' }));
-                    throw new Error(errorData.details || errorData.message || `API call failed with status: ${response.status}`);
-                }
-                const result = await response.json();
-                setIncidents(result);
-            } catch (error: any) {
-                console.error("Failed to fetch incidents:", error);
-                 toast({
-                    variant: "destructive",
-                    title: "Failed to Load Incidents Data",
-                    description: error.message,
-                });
-                setIncidents([]);
-            } finally {
-                setIsLoading(false);
-            }
-        };
-        fetchData();
+        fetchIncidents();
     }, [toast, environment]);
 
     const filteredIncidents = incidents.filter(inc =>
@@ -256,7 +239,12 @@ export default function IncidentsPage() {
                 </CardContent>
             </Card>
 
-            <IncidentDetailSheet incident={selectedIncident} open={!!selectedIncident} onOpenChange={(open) => !open && setSelectedIncident(null)} />
+            <IncidentDetailSheet 
+              incident={selectedIncident} 
+              open={!!selectedIncident} 
+              onOpenChange={(open) => !open && setSelectedIncident(null)} 
+              onIncidentUpdate={fetchIncidents}
+            />
         </div>
     );
 }

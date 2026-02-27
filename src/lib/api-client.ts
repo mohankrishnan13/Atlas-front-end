@@ -1,10 +1,10 @@
-// API client for making authenticated requests to the ATLAS backend
+import type { OverviewData, ApiMonitoringData, NetworkTrafficData, EndpointSecurityData, DbMonitoringData, Incident, HeaderData, UserProfile, AccountActivity, ScheduledReport, RecentDownload, TeamUser } from './types';
 
 const API_URL = process.env.NEXT_PUBLIC_ATLAS_BACKEND_URL || "http://localhost:8000";
 
 export interface ApiError extends Error {
   status?: number;
-  details?: string;
+  details?: any;
 }
 
 export class AtlasApiClient {
@@ -44,25 +44,36 @@ export class AtlasApiClient {
         headers,
       });
 
-      if (!response.ok) {
-        const error = await response.json().catch(() => ({ detail: "Request failed" }));
-        const apiError = new Error(error.detail || `Request failed with status ${response.status}`) as ApiError;
-        apiError.status = response.status;
-        apiError.details = JSON.stringify(error);
-        throw apiError;
+      if (response.status === 401 && typeof window !== "undefined") {
+        console.warn("Session expired or invalid. Redirecting to login.");
+        localStorage.removeItem('atlas_token');
+        localStorage.removeItem('atlas_user');
+        window.location.href = '/login';
+        // Throw an error to prevent further processing
+        const error = new Error("Session expired. Please log in again.") as ApiError;
+        error.status = 401;
+        throw error;
       }
 
-      // Handle empty responses (204 No Content)
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ detail: "Request failed with status " + response.status }));
+        const error = new Error(errorData.detail || `Request failed`) as ApiError;
+        error.status = response.status;
+        error.details = errorData;
+        throw error;
+      }
+
       if (response.status === 204) {
         return {} as T;
       }
 
       return await response.json();
     } catch (error) {
-      if (error instanceof Error) {
-        throw error;
-      }
-      throw new Error("Network error");
+        if (error instanceof ApiError) {
+            throw error;
+        }
+        console.error("Network or fetch error:", error);
+        throw new Error("Network error or backend is unavailable. Please check if the backend server is running.");
     }
   }
 
@@ -75,21 +86,18 @@ export class AtlasApiClient {
       full_name: string;
     }>("/api/auth/login", {
       method: "POST",
-      body: JSON.stringify({ email, password }),
+      body: JSON.stringify({ username: email, password: password }),
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded'},
+      // FastAPI's OAuth2PasswordRequestForm expects form data
+      body: new URLSearchParams({
+        username: email,
+        password: password,
+      })
     });
   }
 
-  async signup(data: {
-    email: string;
-    full_name: string;
-    password: string;
-    role?: string;
-  }) {
-    return this.makeRequest<{
-      message: string;
-      email: string;
-      role: string;
-    }>("/api/auth/signup", {
+  async signup(data: { email: string; full_name: string; password: string; role?: string; }) {
+    return this.makeRequest<{ message: string; email: string; role: string; }>("/api/auth/signup", {
       method: "POST",
       body: JSON.stringify(data),
     });
@@ -102,67 +110,99 @@ export class AtlasApiClient {
     });
   }
 
-  async getProfile() {
-    return this.makeRequest<{
-      id: number;
-      email: string;
-      full_name: string;
-      role: string;
-      is_active: boolean;
-      last_login: string | null;
-      created_at: string;
-    }>("/api/auth/me");
-  }
-
   // Dashboard endpoints
-  async getOverview() {
-    return this.makeRequest("/api/v1/dashboard/overview");
+  async getOverview(env: string) {
+    return this.makeRequest<OverviewData>(`/api/v1/dashboard/overview?env=${env}`);
   }
 
-  async getApiMonitoring() {
-    return this.makeRequest("/api/v1/dashboard/api-monitoring");
+  async getApiMonitoring(env: string) {
+    return this.makeRequest<ApiMonitoringData>(`/api/v1/dashboard/api-monitoring?env=${env}`);
   }
 
-  async getNetworkTraffic() {
-    return this.makeRequest("/api/v1/dashboard/network-traffic");
+  async getNetworkTraffic(env: string) {
+    return this.makeRequest<NetworkTrafficData>(`/api/v1/dashboard/network-traffic?env=${env}`);
   }
 
-  async getEndpointSecurity() {
-    return this.makeRequest("/api/v1/dashboard/endpoint-security");
+  async getEndpointSecurity(env: string) {
+    return this.makeRequest<EndpointSecurityData>(`/api/v1/dashboard/endpoint-security?env=${env}`);
   }
 
-  async getDbMonitoring() {
-    return this.makeRequest("/api/v1/dashboard/db-monitoring");
+  async getDbMonitoring(env: string) {
+    return this.makeRequest<DbMonitoringData>(`/api/v1/dashboard/db-monitoring?env=${env}`);
   }
 
-  async getIncidents() {
-    return this.makeRequest("/api/v1/dashboard/incidents");
+  async getIncidents(env: string) {
+    return this.makeRequest<Incident[]>(`/api/v1/dashboard/incidents?env=${env}`);
+  }
+  
+  async getHeaderData(env: string) {
+    return this.makeRequest<HeaderData>(`/api/v1/dashboard/header-data?env=${env}`);
   }
 
-  // Settings endpoints
-  async getSettings() {
-    return this.makeRequest("/api/v1/settings");
-  }
-
-  async updateSettings(settings: Record<string, any>) {
-    return this.makeRequest("/api/v1/settings", {
-      method: "PUT",
-      body: JSON.stringify(settings),
+  // Incident Actions
+  async remediateIncident(incidentId: string, action: string) {
+    return this.makeRequest(`/api/v1/incidents/remediate`, {
+      method: 'POST',
+      body: JSON.stringify({ incidentId, action }),
     });
   }
 
-  // Incidents endpoints
-  async getIncidentDetails(incidentId: string) {
-    return this.makeRequest(`/api/v1/incidents/${incidentId}`);
+  async quarantineDevice(workstationId: string) {
+    return this.makeRequest(`/api/v1/endpoints/quarantine`, {
+        method: 'POST',
+        body: JSON.stringify({ workstationId }),
+    });
   }
 
-  async createIncident(data: Record<string, any>) {
-    return this.makeRequest("/api/v1/incidents", {
-      method: "POST",
-      body: JSON.stringify(data),
+  // Profile Page
+  async getProfile() {
+    return this.makeRequest<UserProfile>("/api/v1/profile/me");
+  }
+
+  async updateProfile(data: Partial<UserProfile>) {
+    return this.makeRequest<UserProfile>('/api/v1/profile/me', {
+        method: 'PUT',
+        body: JSON.stringify(data),
     });
+  }
+
+  async updatePassword(data: { current_password: string, new_password: string }) {
+    return this.makeRequest('/api/v1/profile/password', {
+        method: 'PUT',
+        body: JSON.stringify(data),
+    });
+  }
+
+  async getProfileActivity() {
+      return this.makeRequest<AccountActivity[]>('/api/v1/profile/activity');
+  }
+
+  // Settings Page
+  async getUsers() {
+      return this.makeRequest<TeamUser[]>('/api/v1/users');
+  }
+
+  async createUser(data: { name: string, email: string, role: string }) {
+      return this.makeRequest<TeamUser>('/api/v1/users', {
+          method: 'POST',
+          body: JSON.stringify(data),
+      });
+  }
+
+  async deleteUser(userId: number) {
+      return this.makeRequest(`/api/v1/users/${userId}`, {
+          method: 'DELETE',
+      });
+  }
+
+  // Reports Page
+  async getScheduledReports() {
+      return this.makeRequest<ScheduledReport[]>('/api/v1/reports/scheduled');
+  }
+
+  async getRecentDownloads() {
+      return this.makeRequest<RecentDownload[]>('/api/v1/reports/downloads');
   }
 }
 
-// Export singleton instance
 export const apiClient = new AtlasApiClient();

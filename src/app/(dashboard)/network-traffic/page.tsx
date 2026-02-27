@@ -10,6 +10,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import type { NetworkTrafficData } from "@/lib/types";
 import { useToast } from "@/hooks/use-toast";
 import { useEnvironment } from "@/context/EnvironmentContext";
+import { apiClient, ApiError } from "@/lib/api-client";
 
 function StatCard({ title, value, icon: Icon, isLoading }: { title: string, value?: string | number, icon: React.ElementType, isLoading: boolean }) {
     return (
@@ -92,27 +93,15 @@ export default function NetworkTrafficPage() {
         const fetchData = async () => {
             setIsLoading(true);
             try {
-                const token = localStorage.getItem('atlas_token');
-                const headers: Record<string, string> = {};
-                if (token) {
-                    headers['Authorization'] = `Bearer ${token}`;
-                }
-                
-                const response = await fetch(`/api/network-traffic?env=${environment}`, {
-                    headers,
-                });
-                if (!response.ok) {
-                    const errorData = await response.json().catch(() => ({ message: 'An unknown API error occurred.' }));
-                    throw new Error(errorData.details || errorData.message || `API call failed with status: ${response.status}`);
-                }
-                const result = await response.json();
+                const result = await apiClient.getNetworkTraffic(environment);
                 setData(result);
             } catch (error: any) {
                 console.error("Failed to fetch network traffic data:", error);
+                const errorMessage = error instanceof ApiError ? error.message : "An unexpected error occurred.";
                 toast({
                     variant: "destructive",
                     title: "Failed to Load Network Traffic Data",
-                    description: error.message,
+                    description: errorMessage,
                 });
                 setData(null);
             } finally {

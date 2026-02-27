@@ -18,6 +18,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useEnvironment } from '@/context/EnvironmentContext';
+import { apiClient, ApiError } from '@/lib/api-client';
 
 function StatCard({ title, value, icon: Icon, isLoading }: { title: string, value?: string | number, icon: React.ElementType, isLoading: boolean }) {
     return (
@@ -95,27 +96,15 @@ export default function EndpointSecurityPage() {
         const fetchData = async () => {
             setIsLoading(true);
             try {
-                const token = localStorage.getItem('atlas_token');
-                const headers: Record<string, string> = {};
-                if (token) {
-                    headers['Authorization'] = `Bearer ${token}`;
-                }
-                
-                const response = await fetch(`/api/endpoint-security?env=${environment}`, {
-                    headers,
-                });
-                if (!response.ok) {
-                    const errorData = await response.json().catch(() => ({ message: 'An unknown API error occurred.' }));
-                    throw new Error(errorData.details || errorData.message || `API call failed with status: ${response.status}`);
-                }
-                const result = await response.json();
+                const result = await apiClient.getEndpointSecurity(environment);
                 setData(result);
             } catch (error: any) {
                 console.error("Failed to fetch endpoint security data:", error);
+                const errorMessage = error instanceof ApiError ? error.message : "An unexpected error occurred.";
                 toast({
                     variant: "destructive",
                     title: "Failed to Load Endpoint Security Data",
-                    description: error.message,
+                    description: errorMessage,
                 });
                 setData(null);
             } finally {
@@ -127,25 +116,7 @@ export default function EndpointSecurityPage() {
 
     const handleQuarantine = async (workstationId: string) => {
         try {
-            const token = localStorage.getItem('atlas_token');
-            const headers: Record<string, string> = {
-                'Content-Type': 'application/json',
-            };
-            if (token) {
-                headers['Authorization'] = `Bearer ${token}`;
-            }
-            
-            const response = await fetch('/api/endpoint-security/quarantine', {
-                method: 'POST',
-                headers,
-                body: JSON.stringify({ workstationId }),
-            });
-
-            if (!response.ok) {
-                const errorData = await response.json().catch(() => ({ message: 'Quarantine command failed' }));
-                throw new Error(errorData.details || errorData.message);
-            }
-            
+            await apiClient.quarantineDevice(workstationId);
             toast({
                 title: "Quarantine Action",
                 description: `Device ${workstationId} has been sent to quarantine.`,

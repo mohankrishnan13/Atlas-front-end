@@ -8,9 +8,7 @@ import { Bug, LineChart, Server, Waves, LoaderCircle } from "lucide-react";
 import { cn, getSeverityClassNames } from "@/lib/utils";
 import type { Severity, OverviewData, Microservice, SystemAnomaly, TimeSeriesData, AppAnomaly } from "@/lib/types";
 import { useEnvironment } from "@/context/EnvironmentContext";
-
 import { generateDailyThreatBriefing } from "@/ai/flows/ai-daily-threat-briefing-flow";
-
 import {
   ChartContainer,
   ChartTooltip,
@@ -20,6 +18,7 @@ import { Line, LineChart as RechartsLineChart, CartesianGrid, XAxis, YAxis, Tool
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
+import { apiClient, ApiError } from "@/lib/api-client";
 
 
 function AiDailyBriefing({ data, isLoading, environment }: { data: OverviewData | null, isLoading: boolean, environment: string }) {
@@ -256,28 +255,15 @@ export default function OverviewPage() {
         const fetchData = async () => {
             setIsLoading(true);
             try {
-                // Get token from localStorage
-                const token = localStorage.getItem('atlas_token');
-                const headers: Record<string, string> = {};
-                if (token) {
-                    headers['Authorization'] = `Bearer ${token}`;
-                }
-                
-                const response = await fetch(`/api/overview?env=${environment}`, {
-                    headers,
-                });
-                if (!response.ok) {
-                    const errorData = await response.json().catch(() => ({ message: 'An unknown API error occurred.' }));
-                    throw new Error(errorData.details || errorData.message || `API call failed with status: ${response.status}`);
-                }
-                const result = await response.json();
+                const result = await apiClient.getOverview(environment);
                 setData(result);
             } catch (error: any) {
                 console.error("Failed to fetch overview data:", error);
+                const errorMessage = error instanceof ApiError ? error.message : "An unexpected error occurred.";
                 toast({
                     variant: "destructive",
                     title: "Failed to Load Overview Data",
-                    description: error.message,
+                    description: errorMessage,
                 });
                 setData(null);
             } finally {

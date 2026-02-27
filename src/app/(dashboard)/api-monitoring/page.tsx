@@ -16,6 +16,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import type { ApiMonitoringData } from "@/lib/types";
 import { useToast } from "@/hooks/use-toast";
 import { useEnvironment } from "@/context/EnvironmentContext";
+import { apiClient, ApiError } from "@/lib/api-client";
 
 const chartConfig = {
   actual: {
@@ -52,27 +53,15 @@ export default function ApiMonitoringPage() {
         const fetchData = async () => {
             setIsLoading(true);
             try {
-                const token = localStorage.getItem('atlas_token');
-                const headers: Record<string, string> = {};
-                if (token) {
-                    headers['Authorization'] = `Bearer ${token}`;
-                }
-                
-                const response = await fetch(`/api/api-monitoring?env=${environment}`, {
-                    headers,
-                });
-                if (!response.ok) {
-                    const errorData = await response.json().catch(() => ({ message: 'An unknown API error occurred.' }));
-                    throw new Error(errorData.details || errorData.message || `API call failed with status: ${response.status}`);
-                }
-                const result = await response.json();
+                const result = await apiClient.getApiMonitoring(environment);
                 setData(result);
             } catch (error: any) {
                 console.error("Failed to fetch API monitoring data:", error);
+                const errorMessage = error instanceof ApiError ? error.message : "An unexpected error occurred.";
                 toast({
                     variant: "destructive",
                     title: "Failed to Load API Monitoring Data",
-                    description: error.message,
+                    description: errorMessage,
                 });
                 setData(null);
             } finally {

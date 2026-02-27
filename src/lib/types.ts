@@ -27,6 +27,13 @@ export type RecentAlert = {
   timestamp: string;
 };
 
+export type HeaderData = {
+    user: User;
+    applications: Application[];
+    recentAlerts: RecentAlert[];
+};
+
+
 // Overview Page
 export type AppAnomaly = {
   name: string;
@@ -166,11 +173,47 @@ export type Incident = {
     eventDetails: string;
 };
 
-// Settings Page
+// Settings Page / User Management
 export type TeamUser = {
   id: number;
   name: string;
   email: string;
   role: "Admin" | "Analyst";
   avatar: string;
+  status: "Active" | "Invite Pending";
+};
+
+// Profile Page
+export type UserProfile = {
+  id: number;
+  full_name: string;
+  first_name: string;
+  last_name: string;
+  email: string;
+  phone_number: string;
+  timezone: string;
+  enable_2fa: boolean;
+};
+
+export type AccountActivity = {
+  id: string;
+  dateTime: string;
+  ip: string;
+  location: string;
+  status: string;
+};
+
+// Reports Page
+export type ScheduledReport = {
+  id: string;
+  title: string;
+  schedule: string;
+  isActive: boolean;
+};
+
+export type RecentDownload = {
+  id: string;
+  name: string;
+  generated: string;
+  url: string;
 };

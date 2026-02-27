@@ -1,6 +1,7 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useForm, Controller } from 'react-hook-form';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -11,8 +12,14 @@ import { Switch } from '@/components/ui/switch';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
-import { Cog, SlidersHorizontal, Shield, BrainCircuit, Users, AlertTriangle, Search, PlusCircle } from 'lucide-react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogTrigger } from '@/components/ui/dialog';
+import { Cog, SlidersHorizontal, Shield, BrainCircuit, Users, AlertTriangle, Search, PlusCircle, Trash2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useToast } from '@/hooks/use-toast';
+import { apiClient, ApiError } from '@/lib/api-client';
+import type { TeamUser } from '@/lib/types';
+import { Skeleton } from '@/components/ui/skeleton';
+
 
 type Tab = 'general' | 'alert-tuning' | 'containment' | 'ml-baselines' | 'user-access';
 
@@ -24,35 +31,161 @@ const navItems = [
   { id: 'user-access', label: 'User Access', icon: Users },
 ];
 
-const mockUsers = [
-    {
-        name: 'Jane Doe',
-        email: 'jane@atlas.com',
-        role: 'Admin',
-        roleColor: 'bg-purple-600/20 text-purple-300 border-purple-500/30',
-        status: 'Active',
-        statusColor: 'bg-emerald-500',
-        avatar: 'JD'
-    },
-    {
-        name: 'John Smith',
-        email: 'john@atlas.com',
-        role: 'Analyst',
-        roleColor: 'bg-blue-600/20 text-blue-300 border-blue-500/30',
-        status: 'Active',
-        statusColor: 'bg-emerald-500',
-        avatar: 'JS'
-    },
-    {
-        name: 'Auditor External',
-        email: 'audit@firm.com',
-        role: 'Read-Only',
-        roleColor: 'bg-slate-600/50 text-slate-300 border-slate-500/30',
-        status: 'Invite Pending',
-        statusColor: 'bg-yellow-500',
-        avatar: 'AE'
-    }
-];
+
+function UserAccessTab() {
+    const { toast } = useToast();
+    const [users, setUsers] = useState<TeamUser[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
+    const [isDialogOpen, setIsDialogOpen] = useState(false);
+
+    const fetchUsers = async () => {
+        setIsLoading(true);
+        try {
+            const data = await apiClient.getUsers();
+            setUsers(data);
+        } catch (error: any) {
+            const errorMessage = error instanceof ApiError ? error.message : "An unexpected error occurred.";
+            toast({ variant: 'destructive', title: 'Failed to load users', description: errorMessage });
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        fetchUsers();
+    }, []);
+
+    const { control, handleSubmit, reset } = useForm({
+        defaultValues: { name: '', email: '', role: 'Analyst' }
+    });
+
+    const handleAddUser = async (data: any) => {
+        try {
+            await apiClient.createUser(data);
+            toast({ title: 'User Invited', description: `${data.name} has been invited to join ATLAS.` });
+            setIsDialogOpen(false);
+            reset();
+            fetchUsers();
+        } catch (error: any) {
+            const errorMessage = error instanceof ApiError ? error.message : "An unexpected error occurred.";
+            toast({ variant: 'destructive', title: 'Failed to invite user', description: errorMessage });
+        }
+    };
+    
+    const handleDeleteUser = async (userId: number, userName: string) => {
+        if (!confirm(`Are you sure you want to revoke access for ${userName}?`)) return;
+        try {
+            await apiClient.deleteUser(userId);
+            toast({ title: 'User Access Revoked', description: `Access for ${userName} has been revoked.` });
+            fetchUsers();
+        } catch (error: any) {
+            const errorMessage = error instanceof ApiError ? error.message : "An unexpected error occurred.";
+            toast({ variant: 'destructive', title: 'Failed to revoke access', description: errorMessage });
+        }
+    };
+
+    return (
+        <Card>
+            <CardHeader>
+                <CardTitle>User Access & Roles</CardTitle>
+            </CardHeader>
+            <CardContent>
+                <div className="flex items-center justify-between mb-4 border-b border-slate-800 pb-4">
+                    <div className="relative w-full max-w-sm">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                        <Input placeholder="Search users by name or email..." className="pl-9" />
+                    </div>
+                    <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+                        <DialogTrigger asChild>
+                            <Button className="bg-emerald-600 hover:bg-emerald-700 text-white">
+                                <PlusCircle className="mr-2 h-4 w-4" />
+                                Add New User
+                            </Button>
+                        </DialogTrigger>
+                        <DialogContent>
+                            <DialogHeader>
+                                <DialogTitle>Invite New User</DialogTitle>
+                                <DialogDescription>Enter the details of the user you want to invite.</DialogDescription>
+                            </DialogHeader>
+                            <form onSubmit={handleSubmit(handleAddUser)} className="space-y-4">
+                                <Controller name="name" control={control} render={({ field }) => (<div className="space-y-2"><Label>Full Name</Label><Input {...field} /></div>)} />
+                                <Controller name="email" control={control} render={({ field }) => (<div className="space-y-2"><Label>Email</Label><Input type="email" {...field} /></div>)} />
+                                <Controller name="role" control={control} render={({ field }) => (
+                                    <div className="space-y-2">
+                                        <Label>Role</Label>
+                                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                            <SelectTrigger><SelectValue /></SelectTrigger>
+                                            <SelectContent>
+                                                <SelectItem value="Analyst">Analyst</SelectItem>
+                                                <SelectItem value="Admin">Admin</SelectItem>
+                                            </SelectContent>
+                                        </Select>
+                                    </div>
+                                )} />
+                                <DialogFooter>
+                                    <Button type="submit">Send Invite</Button>
+                                </DialogFooter>
+                            </form>
+                        </DialogContent>
+                    </Dialog>
+                </div>
+                <Table>
+                    <TableHeader>
+                        <TableRow>
+                            <TableHead>User</TableHead>
+                            <TableHead>Role</TableHead>
+                            <TableHead>Status</TableHead>
+                            <TableHead className="text-right">Actions</TableHead>
+                        </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                        {isLoading && Array.from({length: 3}).map((_, i) => (
+                             <TableRow key={i}>
+                                <TableCell className="flex items-center gap-3">
+                                    <Skeleton className="w-9 h-9 rounded-full" />
+                                    <div className="space-y-1"><Skeleton className="h-4 w-24" /><Skeleton className="h-3 w-32" /></div>
+                                </TableCell>
+                                <TableCell><Skeleton className="h-6 w-16 rounded-full" /></TableCell>
+                                <TableCell><Skeleton className="h-4 w-20" /></TableCell>
+                                <TableCell className="text-right"><Skeleton className="h-8 w-24" /></TableCell>
+                            </TableRow>
+                        ))}
+                        {!isLoading && users.map((user) => (
+                            <TableRow key={user.email}>
+                                <TableCell>
+                                    <div className="flex items-center gap-3">
+                                        <Avatar className="w-9 h-9">
+                                            <AvatarFallback className="bg-slate-700 text-slate-300">{user.name.split(' ').map(n => n[0]).join('')}</AvatarFallback>
+                                        </Avatar>
+                                        <div>
+                                            <div className="font-medium text-white">{user.name}</div>
+                                            <div className="text-sm text-muted-foreground">{user.email}</div>
+                                        </div>
+                                    </div>
+                                </TableCell>
+                                <TableCell>
+                                    <Badge variant="outline" className={user.role === 'Admin' ? 'bg-purple-600/20 text-purple-300 border-purple-500/30' : 'bg-blue-600/20 text-blue-300 border-blue-500/30'}>{user.role}</Badge>
+                                </TableCell>
+                                <TableCell>
+                                    <div className="flex items-center gap-2">
+                                        <span className={cn("h-2 w-2 rounded-full", user.status === 'Active' ? 'bg-emerald-500' : 'bg-yellow-500')}></span>
+                                        <span>{user.status}</span>
+                                    </div>
+                                </TableCell>
+                                <TableCell className="text-right">
+                                    <Button variant="ghost" size="icon" onClick={() => handleDeleteUser(user.id, user.name)}>
+                                        <Trash2 className="h-4 w-4 text-red-500" />
+                                    </Button>
+                                </TableCell>
+                            </TableRow>
+                        ))}
+                    </TableBody>
+                </Table>
+            </CardContent>
+        </Card>
+    );
+}
+
 
 export default function SettingsPage() {
   const [activeTab, setActiveTab] = useState<Tab>('general');
@@ -209,66 +342,7 @@ export default function SettingsPage() {
             </Card>
         );
       case 'user-access':
-        return (
-            <Card>
-                <CardHeader>
-                    <CardTitle>User Access & Roles</CardTitle>
-                </CardHeader>
-                <CardContent>
-                    <div className="flex items-center justify-between mb-4 border-b border-slate-800 pb-4">
-                        <div className="relative w-full max-w-sm">
-                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                            <Input placeholder="Search users by name or email..." className="pl-9" />
-                        </div>
-                        <Button className="bg-emerald-600 hover:bg-emerald-700 text-white">
-                            <PlusCircle className="mr-2 h-4 w-4" />
-                            Add New User
-                        </Button>
-                    </div>
-                     <Table>
-                        <TableHeader>
-                            <TableRow>
-                                <TableHead>User</TableHead>
-                                <TableHead>Role</TableHead>
-                                <TableHead>Status</TableHead>
-                                <TableHead className="text-right">Actions</TableHead>
-                            </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                            {mockUsers.map((user) => (
-                                <TableRow key={user.email}>
-                                    <TableCell>
-                                        <div className="flex items-center gap-3">
-                                            <Avatar className="w-9 h-9">
-                                                <AvatarFallback className="bg-slate-700 text-slate-300">{user.avatar}</AvatarFallback>
-                                            </Avatar>
-                                            <div>
-                                                <div className="font-medium text-white">{user.name}</div>
-                                                <div className="text-sm text-muted-foreground">{user.email}</div>
-                                            </div>
-                                        </div>
-                                    </TableCell>
-                                    <TableCell>
-                                        <Badge variant="outline" className={user.roleColor}>{user.role}</Badge>
-                                    </TableCell>
-                                     <TableCell>
-                                        <div className="flex items-center gap-2">
-                                            <span className={cn("h-2 w-2 rounded-full", user.statusColor)}></span>
-                                            <span>{user.status}</span>
-                                        </div>
-                                    </TableCell>
-                                    <TableCell className="text-right">
-                                        {user.role === 'Admin' && <Button variant="outline" className="border-blue-500/50 text-blue-400 hover:bg-blue-950 hover:text-blue-300">Edit Permissions</Button>}
-                                        {user.role === 'Analyst' && <Button variant="outline" className="text-red-400 border-red-500/50 hover:bg-red-950 hover:text-red-300">Revoke Access</Button>}
-                                        {user.role === 'Read-Only' && <Button variant="outline" className="border-slate-500/50 hover:bg-slate-800">Resend Invite</Button>}
-                                    </TableCell>
-                                </TableRow>
-                            ))}
-                        </TableBody>
-                    </Table>
-                </CardContent>
-            </Card>
-        );
+        return <UserAccessTab />;
       default:
         return null;
     }
@@ -278,7 +352,6 @@ export default function SettingsPage() {
     <div className="space-y-8">
       <h1 className="text-3xl font-bold">Settings</h1>
       <div className="grid grid-cols-1 md:grid-cols-[240px_1fr] gap-8 items-start">
-        {/* Left Column (Sub-navigation Sidebar) */}
         <aside className="sticky top-24">
           <nav className="flex flex-col space-y-1">
             {navItems.map((item) => {
@@ -301,7 +374,6 @@ export default function SettingsPage() {
           </nav>
         </aside>
 
-        {/* Right Column (Main Content Area) */}
         <main>
           {renderContent()}
         </main>

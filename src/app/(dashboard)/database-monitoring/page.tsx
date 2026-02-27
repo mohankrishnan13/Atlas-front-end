@@ -15,6 +15,7 @@ import {
 import { Area, AreaChart, CartesianGrid, XAxis, YAxis, Tooltip as RechartsTooltip, ResponsiveContainer, Legend } from "recharts"
 import { useToast } from "@/hooks/use-toast";
 import { useEnvironment } from "@/context/EnvironmentContext";
+import { apiClient, ApiError } from "@/lib/api-client";
 
 const chartConfig = {
   SELECT: { label: "SELECT", color: "hsl(var(--chart-1))" },
@@ -51,27 +52,15 @@ export default function DatabaseMonitoringPage() {
         const fetchData = async () => {
             setIsLoading(true);
             try {
-                const token = localStorage.getItem('atlas_token');
-                const headers: Record<string, string> = {};
-                if (token) {
-                    headers['Authorization'] = `Bearer ${token}`;
-                }
-                
-                const response = await fetch(`/api/db-monitoring?env=${environment}`, {
-                    headers,
-                });
-                 if (!response.ok) {
-                    const errorData = await response.json().catch(() => ({ message: 'An unknown API error occurred.' }));
-                    throw new Error(errorData.details || errorData.message || `API call failed with status: ${response.status}`);
-                }
-                const result = await response.json();
+                const result = await apiClient.getDbMonitoring(environment);
                 setData(result);
             } catch (error: any) {
                 console.error("Failed to fetch database monitoring data:", error);
+                const errorMessage = error instanceof ApiError ? error.message : "An unexpected error occurred.";
                 toast({
                     variant: "destructive",
                     title: "Failed to Load Database Monitoring Data",
-                    description: error.message,
+                    description: errorMessage,
                 });
                 setData(null);
             } finally {

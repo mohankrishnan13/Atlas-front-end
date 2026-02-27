@@ -10,17 +10,56 @@ import { Calendar as CalendarIcon, Bot, FileText, Download } from "lucide-react"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import { DateRange } from "react-day-picker";
-import { format } from "date-fns";
-import { addDays } from "date-fns";
-import React from "react";
+import { format, addDays } from "date-fns";
+import React, { useState, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
+import { apiClient, ApiError } from "@/lib/api-client";
+import { ScheduledReport, RecentDownload } from "@/lib/types";
+import { Skeleton } from "@/components/ui/skeleton";
+import { cn } from "@/lib/utils";
 
 export default function ReportsPage() {
     const { toast } = useToast();
     const [date, setDate] = React.useState<DateRange | undefined>({
-        from: new Date(2024, 4, 20),
-        to: addDays(new Date(2024, 4, 20), 7),
+        from: new Date(),
+        to: addDays(new Date(), 7),
     });
+
+    const [scheduledReports, setScheduledReports] = useState<ScheduledReport[]>([]);
+    const [recentDownloads, setRecentDownloads] = useState<RecentDownload[]>([]);
+    const [isScheduledLoading, setIsScheduledLoading] = useState(true);
+    const [isDownloadsLoading, setIsDownloadsLoading] = useState(true);
+
+    useEffect(() => {
+        const fetchScheduled = async () => {
+            setIsScheduledLoading(true);
+            try {
+                const data = await apiClient.getScheduledReports();
+                setScheduledReports(data);
+            } catch (error: any) {
+                const errorMessage = error instanceof ApiError ? error.message : "An unexpected error occurred.";
+                toast({ variant: 'destructive', title: 'Failed to load scheduled reports', description: errorMessage });
+            } finally {
+                setIsScheduledLoading(false);
+            }
+        };
+
+        const fetchDownloads = async () => {
+            setIsDownloadsLoading(true);
+            try {
+                const data = await apiClient.getRecentDownloads();
+                setRecentDownloads(data);
+            } catch (error: any) {
+                const errorMessage = error instanceof ApiError ? error.message : "An unexpected error occurred.";
+                toast({ variant: 'destructive', title: 'Failed to load recent downloads', description: errorMessage });
+            } finally {
+                setIsDownloadsLoading(false);
+            }
+        };
+
+        fetchScheduled();
+        fetchDownloads();
+    }, [toast]);
 
     const handleGenerate = () => {
         toast({
@@ -46,7 +85,10 @@ export default function ReportsPage() {
                                 <Button
                                     id="date"
                                     variant={"outline"}
-                                    className="w-full justify-start text-left font-normal"
+                                    className={cn(
+                                        "w-full justify-start text-left font-normal",
+                                        !date && "text-muted-foreground"
+                                      )}
                                 >
                                     <CalendarIcon className="mr-2 h-4 w-4" />
                                     {date?.from ? (
@@ -59,7 +101,7 @@ export default function ReportsPage() {
                                         format(date.from, "LLL dd, y")
                                     )
                                     ) : (
-                                    <span>Pick a date</span>
+                                    <span>Pick a date range</span>
                                     )}
                                 </Button>
                                 </PopoverTrigger>
@@ -118,27 +160,27 @@ export default function ReportsPage() {
                         <CardTitle>Scheduled Reports</CardTitle>
                     </CardHeader>
                     <CardContent className="space-y-4">
-                        <div className="flex items-center justify-between p-4 bg-muted rounded-lg">
-                            <div>
-                                <h4 className="font-semibold">Weekly SOC Summary</h4>
-                                <p className="text-sm text-muted-foreground">Every Monday at 9:00 AM</p>
+                        {isScheduledLoading && Array.from({length: 3}).map((_, i) => (
+                            <div key={i} className="flex items-center justify-between p-4 bg-muted rounded-lg">
+                                <div className="space-y-2">
+                                    <Skeleton className="h-5 w-32" />
+                                    <Skeleton className="h-4 w-48" />
+                                </div>
+                                <Skeleton className="h-6 w-11 rounded-full" />
                             </div>
-                            <Switch defaultChecked />
-                        </div>
-                         <div className="flex items-center justify-between p-4 bg-muted rounded-lg">
-                            <div>
-                                <h4 className="font-semibold">Daily Endpoint Health</h4>
-                                <p className="text-sm text-muted-foreground">Daily at 8:00 AM</p>
+                        ))}
+                        {!isScheduledLoading && scheduledReports.map(report => (
+                            <div key={report.id} className="flex items-center justify-between p-4 bg-muted rounded-lg">
+                                <div>
+                                    <h4 className="font-semibold">{report.title}</h4>
+                                    <p className="text-sm text-muted-foreground">{report.schedule}</p>
+                                </div>
+                                <Switch defaultChecked={report.isActive} />
                             </div>
-                            <Switch defaultChecked />
-                        </div>
-                         <div className="flex items-center justify-between p-4 bg-muted rounded-lg">
-                            <div>
-                                <h4 className="font-semibold">Monthly Compliance Report</h4>
-                                <p className="text-sm text-muted-foreground">1st of every month</p>
-                            </div>
-                            <Switch />
-                        </div>
+                        ))}
+                         {!isScheduledLoading && scheduledReports.length === 0 && (
+                            <p className="text-center text-muted-foreground">No scheduled reports.</p>
+                         )}
                     </CardContent>
                 </Card>
                  <Card>
@@ -146,36 +188,33 @@ export default function ReportsPage() {
                         <CardTitle>Recent Downloads</CardTitle>
                     </CardHeader>
                     <CardContent className="space-y-2">
-                         <div className="flex items-center justify-between p-3 hover:bg-muted rounded-lg">
-                            <div className="flex items-center gap-3">
-                               <FileText className="h-5 w-5 text-muted-foreground"/>
-                               <div>
-                                    <h4 className="font-semibold">incidents_2024-05-20.pdf</h4>
-                                    <p className="text-sm text-muted-foreground">Generated 1 day ago</p>
-                               </div>
+                        {isDownloadsLoading && Array.from({length: 3}).map((_, i) => (
+                             <div key={i} className="flex items-center justify-between p-3">
+                                <div className="flex items-center gap-3">
+                                   <Skeleton className="h-5 w-5" />
+                                   <div className="space-y-2">
+                                        <Skeleton className="h-5 w-40" />
+                                        <Skeleton className="h-4 w-24" />
+                                   </div>
+                                </div>
+                                <Skeleton className="h-8 w-8" />
                             </div>
-                            <Button variant="ghost" size="icon"><Download className="h-5 w-5" /></Button>
-                        </div>
-                        <div className="flex items-center justify-between p-3 hover:bg-muted rounded-lg">
-                            <div className="flex items-center gap-3">
-                               <FileText className="h-5 w-5 text-muted-foreground"/>
-                               <div>
-                                    <h4 className="font-semibold">api_traffic_q1_2024.csv</h4>
-                                    <p className="text-sm text-muted-foreground">Generated 3 days ago</p>
-                               </div>
+                        ))}
+                         {!isDownloadsLoading && recentDownloads.map(download => (
+                            <div key={download.id} className="flex items-center justify-between p-3 hover:bg-muted rounded-lg">
+                                <div className="flex items-center gap-3">
+                                <FileText className="h-5 w-5 text-muted-foreground"/>
+                                <div>
+                                        <h4 className="font-semibold">{download.name}</h4>
+                                        <p className="text-sm text-muted-foreground">Generated {download.generated}</p>
+                                </div>
+                                </div>
+                                <Button variant="ghost" size="icon" asChild><a href={download.url}><Download className="h-5 w-5" /></a></Button>
                             </div>
-                            <Button variant="ghost" size="icon"><Download className="h-5 w-5" /></Button>
-                        </div>
-                         <div className="flex items-center justify-between p-3 hover:bg-muted rounded-lg">
-                            <div className="flex items-center gap-3">
-                               <FileText className="h-5 w-5 text-muted-foreground"/>
-                               <div>
-                                    <h4 className="font-semibold">endpoint_health_weekly.pdf</h4>
-                                    <p className="text-sm text-muted-foreground">Generated 5 days ago</p>
-                               </div>
-                            </div>
-                            <Button variant="ghost" size="icon"><Download className="h-5 w-5" /></Button>
-                        </div>
+                         ))}
+                         {!isDownloadsLoading && recentDownloads.length === 0 && (
+                            <p className="text-center text-muted-foreground">No recent downloads.</p>
+                         )}
                     </CardContent>
                 </Card>
             </div>

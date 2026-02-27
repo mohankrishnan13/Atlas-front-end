@@ -9,10 +9,9 @@ import { cn, getSeverityClassNames } from "@/lib/utils";
 import type { Severity, Microservice, AppHealth, ThreatAnomaly } from "@/lib/types";
 import {
   ChartContainer,
-  ChartTooltip,
   ChartTooltipContent,
 } from "@/components/ui/chart"
-import { Line, LineChart as RechartsLineChart, CartesianGrid, XAxis, YAxis, Tooltip as RechartsTooltip, ResponsiveContainer, BarChart, Bar } from "recharts"
+import { Line, LineChart as RechartsLineChart, Tooltip as RechartsTooltip, BarChart, Bar } from "recharts"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 // --- MOCK DATA ---
@@ -88,6 +87,12 @@ const topologyData: Microservice[] = [
 
 // --- COMPONENTS ---
 
+const chartConfig = {
+  requests: {
+    label: "Requests",
+  },
+};
+
 function AppHealthCard({ app }: { app: AppHealth }) {
   const StatusIndicator = () => {
     switch(app.status) {
@@ -121,7 +126,7 @@ function AppHealthCard({ app }: { app: AppHealth }) {
         )}
       </CardHeader>
       <CardContent className="h-20 -m-4">
-        <ResponsiveContainer width="100%" height="100%">
+        <ChartContainer config={chartConfig} className="h-full w-full">
           <RechartsLineChart data={app.trafficData}>
             <RechartsTooltip
               content={<ChartTooltipContent indicator="dot" hideLabel />}
@@ -139,7 +144,7 @@ function AppHealthCard({ app }: { app: AppHealth }) {
               dot={false}
             />
           </RechartsLineChart>
-        </ResponsiveContainer>
+        </ChartContainer>
       </CardContent>
     </Card>
   );

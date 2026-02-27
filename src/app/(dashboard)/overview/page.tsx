@@ -123,7 +123,7 @@ function AppHealthCard({ app }: { app: AppHealth }) {
       <CardContent className="h-20 -m-4">
         <ResponsiveContainer width="100%" height="100%">
           <RechartsLineChart data={app.trafficData}>
-            <Tooltip
+            <RechartsTooltip
               content={<ChartTooltipContent indicator="dot" hideLabel />}
               cursor={false}
             />

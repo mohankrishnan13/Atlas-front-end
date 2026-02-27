@@ -6,7 +6,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from '@/components/ui/input';
-import { Ban, Search, ShieldX, CheckCircle, LoaderCircle } from "lucide-react";
+import { Ban, Search, ShieldX, CheckCircle, LoaderCircle, Zap, KeySquare, UserX } from "lucide-react";
 import { cn, getSeverityClassNames } from "@/lib/utils";
 import type { Severity, Incident } from "@/lib/types";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet';
@@ -118,10 +118,12 @@ function IncidentDetailSheet({ incident, open, onOpenChange, onIncidentUpdate }:
                         <CardHeader>
                             <CardTitle>Remediation Actions</CardTitle>
                         </CardHeader>
-                        <CardContent className="flex gap-2">
-                             <Button variant="outline" onClick={() => handleRemediation('Block IP')}><Ban className="mr-2 h-4 w-4" /> Block IP</Button>
-                             <Button variant="outline" onClick={() => handleRemediation('Isolate Endpoint')}><ShieldX className="mr-2 h-4 w-4" /> Isolate Endpoint</Button>
-                             <Button variant="secondary" onClick={() => handleRemediation('Dismiss')}><CheckCircle className="mr-2 h-4 w-4" /> Dismiss</Button>
+                        <CardContent className="flex flex-wrap gap-2">
+                             <Button variant="destructive" onClick={() => handleRemediation('Throttle App to 50 req/m')}><Zap/>Throttle App</Button>
+                             <Button variant="destructive" onClick={() => handleRemediation('Revoke API Key')}><KeySquare/>Revoke API Key</Button>
+                             <Button variant="destructive" onClick={() => handleRemediation('Quarantine Laptop')}><ShieldX/>Quarantine Laptop</Button>
+                             <Button variant="destructive" onClick={() => handleRemediation('Lock User Account')}><UserX/>Lock User Account</Button>
+                             <Button variant="secondary" onClick={() => handleRemediation('Dismiss')}><CheckCircle/> Dismiss</Button>
                         </CardContent>
                     </Card>
                     <Card>
@@ -181,7 +183,7 @@ export default function IncidentsPage() {
             <div className="relative">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
                 <Input
-                    placeholder='Search incidents... (e.g., source="firewall" status="failure")'
+                    placeholder='Search incidents... (e.g., target="GenAI" or source="LAPTOP-DEV-09")'
                     className="pl-10"
                     value={search}
                     onChange={(e) => setSearch(e.target.value)}

@@ -1,47 +1,95 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { ArrowDown, ArrowUp, DollarSign, Gauge, Ban, LineChart, LoaderCircle } from "lucide-react";
+import { ArrowDown, ArrowUp, Ban, ShieldX } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
   ChartContainer,
   ChartTooltip,
   ChartTooltipContent,
 } from "@/components/ui/chart"
-import { Line, LineChart as RechartsLineChart, CartesianGrid, XAxis, YAxis, Tooltip as RechartsTooltip, ResponsiveContainer, Legend } from "recharts"
+import { Bar, BarChart, CartesianGrid, XAxis, YAxis, Tooltip as RechartsTooltip, ResponsiveContainer, Cell } from "recharts"
 import { Skeleton } from "@/components/ui/skeleton";
 import type { ApiMonitoringData } from "@/lib/types";
 import { useToast } from "@/hooks/use-toast";
 import { useEnvironment } from "@/context/EnvironmentContext";
 import { apiClient, ApiError } from "@/lib/api-client";
+import { Button } from "@/components/ui/button";
 
-const chartConfig = {
-  actual: {
-    label: "Actual Usage",
-    color: "hsl(var(--primary))",
-  },
-  predicted: {
-    label: "AI Baseline",
-    color: "hsl(var(--muted-foreground))",
-  },
-}
-
-function StatCard({ title, value, icon: Icon, isLoading }: { title: string, value?: string | number, icon: React.ElementType, isLoading: boolean }) {
+const TopRiskEndpointsChart = () => {
+    const data = [
+        { endpoint: 'LAPTOP-DEV-09', score: 92 },
+        { endpoint: 'MAC-HR-02', score: 81 },
+        { endpoint: 'WKST-ENG-15', score: 65 },
+        { endpoint: 'CI-Runner-7', score: 45 },
+        { endpoint: 'USER-PC-338', score: 21 },
+    ];
     return (
         <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">{title}</CardTitle>
-                <Icon className="h-4 w-4 text-muted-foreground" />
+            <CardHeader>
+                <CardTitle>Top Risk Endpoints</CardTitle>
+                <CardDescription>Endpoints with the highest anomaly scores or failed logins.</CardDescription>
             </CardHeader>
             <CardContent>
-                {isLoading ? <Skeleton className="h-8 w-24" /> : <div className="text-2xl font-bold">{value}</div>}
+                <ChartContainer config={{}} className="h-64 w-full">
+                     <ResponsiveContainer width="100%" height="100%">
+                        <BarChart data={data} layout="vertical" margin={{ left: 20, top: 10, right: 10 }}>
+                            <CartesianGrid horizontal={false} strokeDasharray="3 3" stroke="hsl(var(--border) / 0.5)" />
+                            <XAxis type="number" tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 12 }} tickLine={false} axisLine={false} />
+                            <YAxis type="category" dataKey="endpoint" tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 12 }} tickLine={false} axisLine={false} width={120} />
+                            <RechartsTooltip content={<ChartTooltipContent />} cursor={{ fill: 'hsl(var(--accent))' }} />
+                            <Bar dataKey="score" layout="vertical" radius={4}>
+                                {data.map((entry, index) => (
+                                    <Cell key={`cell-${index}`} fill={entry.score > 80 ? 'hsl(var(--destructive))' : entry.score > 60 ? 'hsl(var(--chart-2))' : 'hsl(var(--primary))'} />
+                                ))}
+                            </Bar>
+                        </BarChart>
+                    </ResponsiveContainer>
+                </ChartContainer>
             </CardContent>
         </Card>
     )
 }
+
+const ApiConsumptionChart = () => {
+    const apiConsumptionData = [
+      { app: 'Internal HR', volume: 1890 },
+      { app: 'Naukri', volume: 4000 },
+      { app: 'Flipkart', volume: 2181 },
+      { app: 'GenAI', volume: 9800 },
+      { app: 'Auth Service', volume: 2780 },
+      { app: 'Shipping API', volume: 2000 },
+    ];
+    return (
+        <Card>
+            <CardHeader>
+                <CardTitle>API Consumption by Target App</CardTitle>
+                <CardDescription>Request volume per application.</CardDescription>
+            </CardHeader>
+            <CardContent>
+                <ChartContainer config={{}} className="h-64 w-full">
+                     <ResponsiveContainer width="100%" height="100%">
+                        <BarChart data={apiConsumptionData} margin={{ left: -20, top: 10, right: 10 }}>
+                            <CartesianGrid vertical={false} strokeDasharray="3 3" stroke="hsl(var(--border) / 0.5)" />
+                            <XAxis dataKey="app" tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 12 }} tickLine={false} axisLine={false} />
+                            <YAxis tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 12 }} tickLine={false} axisLine={false} tickFormatter={(value) => `${Number(value) / 1000}k`} />
+                            <RechartsTooltip content={<ChartTooltipContent indicator="dot" />} cursor={{ fill: 'hsl(var(--accent))' }}/>
+                            <Bar dataKey="volume" radius={4}>
+                                {apiConsumptionData.map((entry) => (
+                                    <Cell key={entry.app} fill={entry.app === 'GenAI' ? 'hsl(var(--destructive))' : 'hsl(var(--primary))'} />
+                                ))}
+                            </Bar>
+                        </BarChart>
+                    </ResponsiveContainer>
+                </ChartContainer>
+            </CardContent>
+        </Card>
+    )
+}
+
 
 export default function ApiMonitoringPage() {
     const [data, setData] = useState<ApiMonitoringData | null>(null);
@@ -74,37 +122,11 @@ export default function ApiMonitoringPage() {
     return (
         <div className="space-y-8">
             <h1 className="text-3xl font-bold">API Monitoring</h1>
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-                <StatCard title="API Calls Today" value={data?.apiCallsToday?.toLocaleString()} icon={LineChart} isLoading={isLoading} />
-                <StatCard title="Blocked Requests" value={data?.blockedRequests?.toLocaleString()} icon={Ban} isLoading={isLoading} />
-                <StatCard title="Average Latency" value={data ? `${data.avgLatency}ms` : undefined} icon={Gauge} isLoading={isLoading} />
-                <StatCard title="Estimated 3rd-Party API Cost" value={data ? `$${data.estimatedCost.toFixed(2)}` : undefined} icon={DollarSign} isLoading={isLoading} />
+            
+            <div className="grid gap-4 md:grid-cols-2">
+                <ApiConsumptionChart />
+                <TopRiskEndpointsChart />
             </div>
-
-            <Card>
-                <CardHeader>
-                    <CardTitle>API Usage vs Expected AI Baseline</CardTitle>
-                </CardHeader>
-                <CardContent className="h-[400px]">
-                    {isLoading ? <div className="h-full w-full flex items-center justify-center"><Skeleton className="h-full w-full" /></div> :
-                    <ChartContainer config={chartConfig} className="h-full w-full">
-                        <ResponsiveContainer width="100%" height="100%">
-                            <RechartsLineChart data={data?.apiUsageChart} margin={{ top: 5, right: 20, left: -10, bottom: 5 }}>
-                                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--border) / 0.5)" />
-                                <XAxis dataKey="name" tick={{ fill: 'hsl(var(--muted-foreground))' }} tickLine={false} axisLine={false} fontSize={12} />
-                                <YAxis tick={{ fill: 'hsl(var(--muted-foreground))' }} tickLine={false} axisLine={false} fontSize={12} tickFormatter={(value) => `${value / 1000}k`} />
-                                <RechartsTooltip
-                                    content={<ChartTooltipContent hideLabel />}
-                                    cursor={{ stroke: 'hsl(var(--border))', strokeWidth: 2, strokeDasharray: '3 3' }}
-                                />
-                                <Legend />
-                                <Line type="monotone" dataKey="actual" name="Actual Usage" stroke="hsl(var(--primary))" strokeWidth={2} dot={false} />
-                                <Line type="monotone" dataKey="predicted" name="AI Baseline" stroke="hsl(var(--muted-foreground))" strokeWidth={2} strokeDasharray="5 5" dot={false} />
-                            </RechartsLineChart>
-                        </ResponsiveContainer>
-                    </ChartContainer>}
-                </CardContent>
-            </Card>
 
             <Card>
                 <CardHeader>
@@ -115,10 +137,10 @@ export default function ApiMonitoringPage() {
                         <TableHeader>
                             <TableRow>
                                 <TableHead>Endpoint</TableHead>
-                                <TableHead>Method</TableHead>
                                 <TableHead>Cost/Call</TableHead>
                                 <TableHead>Trend (7d)</TableHead>
                                 <TableHead>Action Taken</TableHead>
+                                <TableHead className="text-right">Mitigate</TableHead>
                             </TableRow>
                         </TableHeader>
                         <TableBody>
@@ -134,9 +156,6 @@ export default function ApiMonitoringPage() {
                                             <Badge variant="outline" className="font-mono text-xs bg-secondary">{route.app}</Badge>
                                             <span className="font-mono">{route.path}</span>
                                         </div>
-                                    </TableCell>
-                                    <TableCell>
-                                        <Badge variant="secondary">{route.method}</Badge>
                                     </TableCell>
                                     <TableCell>${route.cost.toFixed(4)}</TableCell>
                                     <TableCell>
@@ -155,6 +174,11 @@ export default function ApiMonitoringPage() {
                                         >
                                             {route.action}
                                         </Badge>
+                                    </TableCell>
+                                    <TableCell className="text-right">
+                                        <Button variant="destructive" size="sm">
+                                            <Ban className="mr-2 h-4 w-4" /> Block Endpoint
+                                        </Button>
                                     </TableCell>
                                 </TableRow>
                             ))}

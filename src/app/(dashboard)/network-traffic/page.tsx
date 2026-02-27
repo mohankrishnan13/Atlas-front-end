@@ -2,53 +2,16 @@
 
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Progress } from "@/components/ui/progress";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Gauge, Users, XCircle, ArrowRight } from "lucide-react";
+import { ArrowRight } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { NetworkTrafficData, NetworkAnomaly } from "@/lib/types";
 import { useToast } from "@/hooks/use-toast";
 import { useEnvironment } from "@/context/EnvironmentContext";
 import { apiClient, ApiError } from "@/lib/api-client";
-
-function StatCard({ title, value, icon: Icon, isLoading }: { title: string, value?: string | number, icon: React.ElementType, isLoading: boolean }) {
-    return (
-        <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">{title}</CardTitle>
-                <Icon className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-                {isLoading ? <Skeleton className="h-8 w-24" /> : <div className="text-2xl font-bold">{value}</div>}
-            </CardContent>
-        </Card>
-    )
-}
-
-function BandwidthGauge({ bandwidth, isLoading }: { bandwidth?: number, isLoading: boolean }) {
-    return (
-        <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Bandwidth</CardTitle>
-                <Gauge className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-                {isLoading ? (
-                    <div className="space-y-2">
-                        <Skeleton className="h-8 w-16" />
-                        <Skeleton className="h-4 w-full" />
-                    </div>
-                ) : (
-                    <>
-                        <div className="text-2xl font-bold mb-2">{bandwidth}%</div>
-                        <Progress value={bandwidth} />
-                    </>
-                )}
-            </CardContent>
-        </Card>
-    )
-}
+import { BarChart, Bar, CartesianGrid, XAxis, YAxis, Tooltip as RechartsTooltip, ResponsiveContainer, Cell } from "recharts"
+import { ChartContainer, ChartTooltipContent } from "@/components/ui/chart";
 
 function TrafficFlowMap({ isLoading, environment }: { isLoading: boolean, environment: string }) {
     const isLocal = environment === 'local';
@@ -62,25 +25,59 @@ function TrafficFlowMap({ isLoading, environment }: { isLoading: boolean, enviro
                 <>
                     <div className="text-center space-y-2">
                         <div className="font-bold text-muted-foreground">{isLocal ? "Employee Workstations" : "External IPs"}</div>
-                        <div className="p-4 bg-muted rounded-lg">{isLocal ? "10.10.10.0/24" : "203.0.113.54"}</div>
-                        <div className="p-4 bg-muted rounded-lg">{isLocal ? "10.10.20.0/24" : "198.51.100.2"}</div>
+                        <div className="p-4 bg-muted rounded-lg font-mono">{isLocal ? "LAPTOP-HR-02" : "203.0.113.54"}</div>
+                        <div className="p-4 bg-muted rounded-lg font-mono">{isLocal ? "WKST-ENG-15" : "198.51.100.2"}</div>
                     </div>
                     <ArrowRight className="h-8 w-8 text-muted-foreground mx-4" />
                     <div className="text-center space-y-2">
                         <div className="font-bold text-muted-foreground">{isLocal ? "Office Firewall" : "Cloud Firewall"}</div>
-                        <div className="p-8 bg-blue-500/20 text-blue-300 rounded-full flex items-center justify-center">{isLocal ? "FW-CORP-01" : "FW-CLOUD-01"}</div>
+                        <div className="p-8 bg-blue-500/20 text-blue-300 rounded-full flex items-center justify-center font-semibold">{isLocal ? "FW-CORP-01" : "FW-CLOUD-01"}</div>
                     </div>
                     <ArrowRight className="h-8 w-8 text-muted-foreground mx-4" />
                     <div className="space-y-4">
                         <div className="font-bold text-muted-foreground text-center">{isLocal ? "Internal Resources" : "Internal App Nodes"}</div>
-                        <div className="p-4 bg-secondary rounded-lg">{isLocal ? "10.0.50.5 [HR-DB]" : "Naukri-Cluster"}</div>
-                        <div className="p-4 bg-secondary rounded-lg">{isLocal ? "10.0.60.10 [File-Server]" : "GenAI-Inference-Node"}</div>
-                        <div className="p-4 bg-secondary rounded-lg">{isLocal ? "10.0.70.15 [Intranet-Portal]" : "Flipkart-Web"}</div>
+                        <div className="p-4 bg-secondary rounded-lg font-semibold">Naukri-Cluster</div>
+                        <div className="p-4 bg-red-500/20 text-red-300 rounded-lg font-semibold">GenAI-Inference-Node</div>
+                        <div className="p-4 bg-secondary rounded-lg font-semibold">Flipkart-Web</div>
                     </div>
                 </>}
             </CardContent>
         </Card>
     );
+}
+
+function TopRiskEndpointsChart() {
+    const data = [
+        { endpoint: 'LAPTOP-DEV-09', score: 92 },
+        { endpoint: 'MAC-HR-02', score: 81 },
+        { endpoint: 'WKST-ENG-15', score: 65 },
+        { endpoint: 'CI-Runner-7', score: 45 },
+        { endpoint: 'USER-PC-338', score: 21 },
+    ];
+    return (
+        <Card>
+            <CardHeader>
+                <CardTitle>Top Risk Endpoints</CardTitle>
+            </CardHeader>
+            <CardContent>
+                <ChartContainer config={{}} className="h-[350px] w-full">
+                     <ResponsiveContainer width="100%" height="100%">
+                        <BarChart data={data} layout="vertical" margin={{ left: 20, top: 10, right: 10 }}>
+                            <CartesianGrid horizontal={false} strokeDasharray="3 3" stroke="hsl(var(--border) / 0.5)" />
+                            <XAxis type="number" tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 12 }} tickLine={false} axisLine={false} />
+                            <YAxis type="category" dataKey="endpoint" tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 12 }} tickLine={false} axisLine={false} width={120} />
+                            <RechartsTooltip content={<ChartTooltipContent />} cursor={{ fill: 'hsl(var(--accent))' }} />
+                            <Bar dataKey="score" layout="vertical" radius={4}>
+                                {data.map((entry, index) => (
+                                    <Cell key={`cell-${index}`} fill={entry.score > 80 ? 'hsl(var(--destructive))' : entry.score > 60 ? 'hsl(var(--chart-2))' : 'hsl(var(--primary))'} />
+                                ))}
+                            </Bar>
+                        </BarChart>
+                    </ResponsiveContainer>
+                </ChartContainer>
+            </CardContent>
+        </Card>
+    )
 }
 
 export default function NetworkTrafficPage() {
@@ -93,17 +90,8 @@ export default function NetworkTrafficPage() {
         const fetchData = async () => {
             setIsLoading(true);
             try {
-                // This is a placeholder; in a real app this would be part of the API response
-                const mockAnomalies: NetworkAnomaly[] = [
-                    { id: 1, sourceEndpoint: 'LAPTOP-HR-02 (David)', targetApp: 'Naukri DB', port: 5432, type: 'Unusual Data Access' },
-                    { id: 2, sourceEndpoint: '203.0.113.54', targetApp: 'GenAI-Inference-Node', port: 443, type: 'DDoS Attempt' },
-                    { id: 3, sourceEndpoint: 'SERVER-CI-04', targetApp: 'Flipkart-Web', port: 8080, type: 'Anomalous Port Scan' }
-                ];
-                
                 const result = await apiClient.getNetworkTraffic(environment);
-                
-                // Merge mock data with API response for demonstration
-                setData({ ...result, networkAnomalies: mockAnomalies });
+                setData(result);
             } catch (error: any) {
                 console.error("Failed to fetch network traffic data:", error);
                 const errorMessage = error instanceof ApiError ? error.message : "An unexpected error occurred.";
@@ -122,14 +110,12 @@ export default function NetworkTrafficPage() {
 
     return (
         <div className="space-y-8">
-            <h1 className="text-3xl font-bold">Network Traffic</h1>
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                <BandwidthGauge bandwidth={data?.bandwidth} isLoading={isLoading} />
-                <StatCard title="Active Connections" value={data?.activeConnections.toLocaleString()} icon={Users} isLoading={isLoading} />
-                <StatCard title="Dropped Packets" value={data?.droppedPackets.toLocaleString()} icon={XCircle} isLoading={isLoading} />
+            <h1 className="text-3xl font-bold">Network Traffic Analysis</h1>
+            
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                <TrafficFlowMap isLoading={isLoading} environment={environment} />
+                <TopRiskEndpointsChart />
             </div>
-
-            <TrafficFlowMap isLoading={isLoading} environment={environment} />
 
             <Card>
                 <CardHeader>

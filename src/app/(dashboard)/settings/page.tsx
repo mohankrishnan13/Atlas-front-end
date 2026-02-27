@@ -1,4 +1,4 @@
-'use client';
+"use client";
 
 import React, { useState, useEffect } from 'react';
 import { useForm, Controller } from 'react-hook-form';
@@ -17,7 +17,7 @@ import { Cog, SlidersHorizontal, Shield, BrainCircuit, Users, AlertTriangle, Sea
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import { apiClient, ApiError } from '@/lib/api-client';
-import type { TeamUser } from '@/lib/types';
+import type { TeamUser, QuarantinedEndpoint } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
 
 
@@ -32,35 +32,16 @@ const navItems = [
 ];
 
 const mockAppSettings = {
-    global: {
-        criticalThreshold: 85,
-        warningThreshold: 60,
-        softLimit: 300,
-        hardBlock: 1000,
-        accumulationWindow: 7,
-    },
-    naukri: {
-        criticalThreshold: 90,
-        warningThreshold: 70,
-        softLimit: 500,
-        hardBlock: 2000,
-        accumulationWindow: 5,
-    },
-    genai: {
-        criticalThreshold: 80,
-        warningThreshold: 55,
-        softLimit: 150,
-        hardBlock: 100, // as per request
-        accumulationWindow: 3,
-    },
-    flipkart: {
-        criticalThreshold: 95,
-        warningThreshold: 75,
-        softLimit: 1000,
-        hardBlock: 5000, // as per request
-        accumulationWindow: 14,
-    }
+    global: { criticalThreshold: 85, warningThreshold: 60, softLimit: 300, hardBlock: 1000, accumulationWindow: 7 },
+    naukri: { criticalThreshold: 90, warningThreshold: 70, softLimit: 500, hardBlock: 2000, accumulationWindow: 5 },
+    genai: { criticalThreshold: 80, warningThreshold: 55, softLimit: 150, hardBlock: 100, accumulationWindow: 3 },
+    flipkart: { criticalThreshold: 95, warningThreshold: 75, softLimit: 1000, hardBlock: 5000, accumulationWindow: 14 }
 }
+
+const mockQuarantinedEndpoints: QuarantinedEndpoint[] = [
+    { id: '1', hostname: 'LAPTOP-DEV-09', quarantinedAt: '2024-05-21 14:30:10 UTC', reason: 'Unauthorized port scan' },
+    { id: '2', hostname: 'MAC-HR-02', quarantinedAt: '2024-05-21 10:15:22 UTC', reason: 'Firewall disabled by user' },
+]
 
 
 function UserAccessTab() {
@@ -222,12 +203,10 @@ export default function SettingsPage() {
   const [activeTab, setActiveTab] = useState<Tab>('general');
   const [selectedApp, setSelectedApp] = useState('global');
   
-  // State for interactive elements
   const [systemName, setSystemName] = useState('ATLAS | Enterprise Anomaly Monitoring System');
   const [timezone, setTimezone] = useState('utc');
   const [retention, setRetention] = useState(90);
 
-  // App-specific settings
   const [criticalThreshold, setCriticalThreshold] = useState([mockAppSettings.global.criticalThreshold]);
   const [warningThreshold, setWarningThreshold] = useState([mockAppSettings.global.warningThreshold]);
   const [softLimit, setSoftLimit] = useState([mockAppSettings.global.softLimit]);
@@ -235,11 +214,11 @@ export default function SettingsPage() {
   const [accumulationWindow, setAccumulationWindow] = useState([mockAppSettings.global.accumulationWindow]);
 
   const [emailAlerts, setEmailAlerts] = useState(true);
-  const [autoDismiss, setAutoDismiss] = useState(true);
-  const [enableML, setEnableML] = useState(true);
-  const [autoQuarantine, setAutoQuarantine] = useState(false);
+  const [autoQuarantine, setAutoQuarantine] = useState(true);
   const [trainingWindow, setTrainingWindow] = useState(30);
   const [modelSensitivity, setModelSensitivity] = useState('balanced');
+  
+  const [quarantinedEndpoints, setQuarantinedEndpoints] = useState<QuarantinedEndpoint[]>(mockQuarantinedEndpoints);
 
   useEffect(() => {
     const newSettings = mockAppSettings[selectedApp as keyof typeof mockAppSettings] || mockAppSettings.global;
@@ -249,6 +228,8 @@ export default function SettingsPage() {
     setHardBlock([newSettings.hardBlock]);
     setAccumulationWindow([newSettings.accumulationWindow]);
   }, [selectedApp]);
+
+  const selectedAppName = navItems.find(item => item.id === selectedApp)?.label || 'Global';
 
 
   const renderContent = () => {
@@ -288,23 +269,16 @@ export default function SettingsPage() {
           <Card>
             <CardHeader>
               <CardTitle>Alert Threshold Configuration</CardTitle>
+               <CardDescription>Tuning for: <span className="font-semibold text-primary">{selectedAppName}</span></CardDescription>
             </CardHeader>
             <CardContent className="space-y-8">
               <div className="space-y-4">
                 <Label>Critical Alert Threshold (Score {criticalThreshold[0]}-100)</Label>
                 <Slider value={criticalThreshold} onValueChange={setCriticalThreshold} max={100} min={80} step={1} className="[&>span]:bg-red-500" />
-                <div className="flex justify-between text-xs text-muted-foreground">
-                    <span>Low Sensitivity</span>
-                    <span>High Sensitivity</span>
-                </div>
               </div>
                <div className="space-y-4">
                 <Label>Warning Alert Threshold (Score {warningThreshold[0]}-79)</Label>
                 <Slider value={warningThreshold} onValueChange={setWarningThreshold} max={79} min={50} step={1} className="[&>span]:bg-orange-500" />
-                 <div className="flex justify-between text-xs text-muted-foreground">
-                    <span>Low Sensitivity</span>
-                    <span>High Sensitivity</span>
-                </div>
               </div>
               <div className="space-y-4 pt-4 border-t border-slate-800">
                 <h4 className="text-lg font-semibold">Notifications</h4>
@@ -318,43 +292,71 @@ export default function SettingsPage() {
         );
       case 'containment':
         return (
+            <>
             <Card>
                 <CardHeader>
                     <CardTitle>Progressive Containment Rules</CardTitle>
-                    <CardDescription>Configure automated response thresholds based on anomaly frequency.</CardDescription>
+                    <CardDescription>Configure automated response thresholds for <span className="font-semibold text-primary">{selectedAppName}</span>.</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-8">
                      <div className="space-y-4">
-                        <Label>Soft Rate Limit Threshold ({softLimit[0]} Calls/min)</Label>
-                        <Slider value={softLimit} onValueChange={setSoftLimit} max={1000} min={100} step={10} className="[&>span]:bg-blue-500" />
+                        <Label>Soft Rate Limit Threshold ({softLimit[0]} Calls/min) for {selectedAppName}</Label>
+                        <Slider value={softLimit} onValueChange={setSoftLimit} max={selectedApp === 'flipkart' ? 5000 : 1000} min={100} step={10} className="[&>span]:bg-blue-500" />
                     </div>
                      <div className="space-y-4">
-                        <Label>Hard Block Threshold ({hardBlock[0]} Calls/min)</Label>
-                        <Slider value={hardBlock} onValueChange={setHardBlock} max={5000} min={500} step={50} className="[&>span]:bg-red-500" />
+                        <Label>Hard Block Threshold ({hardBlock[0]} Calls/min) for {selectedAppName}</Label>
+                        <Slider value={hardBlock} onValueChange={setHardBlock} max={selectedApp === 'flipkart' ? 10000 : 5000} min={selectedApp === 'genai' ? 50: 500} step={50} className="[&>span]:bg-red-500" />
                     </div>
                     <div className="space-y-4">
                         <Label>Anomaly Accumulation Window ({accumulationWindow[0]} Days)</Label>
                         <Slider value={accumulationWindow} onValueChange={setAccumulationWindow} max={30} min={1} step={1} className="[&>span]:bg-orange-500" />
                     </div>
-                    <div className="space-y-4 pt-4 border-t border-slate-800">
-                         <div className="flex items-center justify-between p-4 bg-muted rounded-lg">
-                            <Label htmlFor="auto-dismiss" className="font-medium">Auto-dismiss known benign activity</Label>
-                            <Switch id="auto-dismiss" checked={autoDismiss} onCheckedChange={setAutoDismiss} />
+                </CardContent>
+            </Card>
+            <Card>
+                <CardHeader>
+                    <CardTitle>Endpoint Policy</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                    <div className="flex items-center justify-between p-4 bg-muted rounded-lg border border-red-900/50">
+                        <div className="flex items-center gap-2">
+                            <AlertTriangle className="h-5 w-5 text-red-500" />
+                            <Label htmlFor="auto-quarantine" className="font-medium text-red-400">Auto-Quarantine Laptops attempting lateral database movement</Label>
                         </div>
-                        <div className="flex items-center justify-between p-4 bg-muted rounded-lg">
-                            <Label htmlFor="enable-ml" className="font-medium">Enable ML-based baseline learning</Label>
-                            <Switch id="enable-ml" checked={enableML} onCheckedChange={setEnableML} />
-                        </div>
-                        <div className="flex items-center justify-between p-4 bg-muted rounded-lg border border-red-900/50">
-                            <div className="flex items-center gap-2">
-                                <AlertTriangle className="h-5 w-5 text-red-500" />
-                                <Label htmlFor="auto-quarantine" className="font-medium text-red-400">Auto-quarantine infected endpoints</Label>
-                            </div>
-                            <Switch id="auto-quarantine" checked={autoQuarantine} onCheckedChange={setAutoQuarantine} />
-                        </div>
+                        <Switch id="auto-quarantine" checked={autoQuarantine} onCheckedChange={setAutoQuarantine} />
+                    </div>
+
+                    <div>
+                        <h4 className="font-semibold mb-2">Currently Quarantined Laptops</h4>
+                        <Table>
+                            <TableHeader>
+                                <TableRow>
+                                    <TableHead>Hostname</TableHead>
+                                    <TableHead>Quarantined At</TableHead>
+                                    <TableHead>Reason</TableHead>
+                                    <TableHead className="text-right">Actions</TableHead>
+                                </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                                {quarantinedEndpoints.map(endpoint => (
+                                    <TableRow key={endpoint.id}>
+                                        <TableCell className="font-mono">{endpoint.hostname}</TableCell>
+                                        <TableCell>{endpoint.quarantinedAt}</TableCell>
+                                        <TableCell>{endpoint.reason}</TableCell>
+                                        <TableCell className="text-right">
+                                            <Button variant="secondary" size="sm">Lift Quarantine</Button>
+                                        </TableCell>
+                                    </TableRow>
+                                ))}
+                                {quarantinedEndpoints.length === 0 && (
+                                     <TableRow><TableCell colSpan={4} className="text-center text-muted-foreground">No endpoints are currently quarantined.</TableCell></TableRow>
+                                )}
+                            </TableBody>
+                        </Table>
                     </div>
                 </CardContent>
             </Card>
+            </>
         );
       case 'ml-baselines':
         return (
@@ -426,7 +428,7 @@ export default function SettingsPage() {
                     <Label htmlFor="app-context" className="text-xs text-muted-foreground">Application Context</Label>
                     <Select value={selectedApp} onValueChange={setSelectedApp}>
                         <SelectTrigger id="app-context" className="mt-1">
-                            <SelectValue placeholder="Select an application..." />
+                            <SelectValue placeholder="Select App to Configure..." />
                         </SelectTrigger>
                         <SelectContent>
                             <SelectItem value="global">Global Defaults</SelectItem>

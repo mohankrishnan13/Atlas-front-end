@@ -4,82 +4,49 @@ import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { LoaderCircle } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Ban, Eye, Zap, ShieldX, KeySquare } from "lucide-react";
 import { cn, getSeverityClassNames } from "@/lib/utils";
 import type { Severity, Microservice, AppHealth, ThreatAnomaly } from "@/lib/types";
 import {
   ChartContainer,
   ChartTooltip,
   ChartTooltipContent,
-  ChartLegend,
-  ChartLegendContent,
 } from "@/components/ui/chart"
-import { Area, AreaChart, Line, LineChart as RechartsLineChart, Tooltip as RechartsTooltip, BarChart, Bar, CartesianGrid, XAxis, YAxis } from "recharts"
+import { BarChart, Bar, CartesianGrid, XAxis, YAxis, Tooltip as RechartsTooltip, ResponsiveContainer } from "recharts"
 import { Tooltip, TooltipProvider, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 
 // --- MOCK DATA ---
 const appHealthData: AppHealth[] = [
-  {
-    id: 'naukri',
-    name: 'Naukri (Prod)',
-    status: 'Healthy',
-    trafficData: [
-      { name: '1h', requests: 3490 }, { name: '50m', requests: 3800 },
-      { name: '40m', requests: 3200 }, { name: '30m', requests: 4000 },
-      { name: '20m', requests: 3700 }, { name: '10m', requests: 4200 },
-      { name: 'now', requests: 4100 },
-    ]
-  },
-  {
-    id: 'genai',
-    name: 'GenAI Service',
-    status: 'Critical',
-    statusText: 'API Overuse Detected',
-     trafficData: [
-      { name: '1h', requests: 1200 }, { name: '50m', requests: 1500 },
-      { name: '40m', requests: 1300 }, { name: '30m', requests: 2500 },
-      { name: '20m', requests: 5800 }, { name: '10m', requests: 9200 },
-      { name: 'now', requests: 11500 },
-    ]
-  },
-  {
-    id: 'flipkart',
-    name: 'Flipkart Internal',
-    status: 'Warning',
-    statusText: 'High Latency',
-     trafficData: [
-      { name: '1h', requests: 2200 }, { name: '50m', requests: 2100 },
-      { name: '40m', requests: 2400 }, { name: '30m', requests: 2300 },
-      { name: '20m', requests: 2500 }, { name: '10m', requests: 2600 },
-      { name: 'now', requests: 2550 },
-    ]
-  }
+  { id: 'genai', name: 'GenAI Service', load: '450 req/m', status: 'Critical', statusText: 'API Overuse Detected', action: 'Apply Hard Limit' },
+  { id: 'naukri', name: 'Naukri Portal', load: '3.2K req/m', status: 'Healthy', action: 'View Traffic' },
+  { id: 'flipkart', name: 'Flipkart DB', load: '85% Capacity', status: 'Warning', statusText: 'High Latency', action: 'Isolate DB' },
 ];
 
 const threatsData: ThreatAnomaly[] = [
   {
     id: 'threat-1',
     severity: 'Critical',
-    target: '[GenAI Service]',
-    assignee: 'AI System',
-    issue: 'Massive spike in API consumption from external IP. Cost threshold exceeded.',
-    timestamp: '2m ago'
+    targetApp: 'GenAI Service',
+    source: 'API_Bot_Service_Account',
+    issue: 'Exceeded tier limits (5000+ tokens/min). Cost spike detected.',
+    actions: ['Throttle App to 50 req/m', 'Revoke API Key']
   },
   {
     id: 'threat-2',
     severity: 'High',
-    target: '[LAPTOP-DEV-09]',
-    assignee: 'Sarah Jenkins',
-    issue: 'Multiple failed SSH login attempts detected on the local network.',
-    timestamp: '8m ago'
+    targetApp: 'Naukri Database Cluster',
+    source: '[LAPTOP-DEV-09] (Sarah Jenkins)',
+    issue: 'Unauthorized port scan targeting production DB.',
+    actions: ['Quarantine Laptop (Drop Network)', 'Lock User Account']
   },
    {
     id: 'threat-3',
     severity: 'High',
-    target: '[MAC-HR-02]',
-    assignee: 'David Chen',
+    targetApp: 'Internal AD',
+    source: '[MAC-HR-02] (David Chen)',
     issue: 'Firewall disabled by user via local settings.',
-    timestamp: '25m ago'
+    actions: ['Force Policy Update', 'Quarantine Laptop']
   }
 ];
 
@@ -89,30 +56,17 @@ const topologyData: Microservice[] = [
   { id: 'flipkart', name: 'Flipkart Portal', status: 'Healthy', position: { top: '70%', left: '80%' }, connections: [] },
 ];
 
-const apiRequestsData = [
-  { time: '12 AM', naukri: 4000, genai: 2400, flipkart: 2400 },
-  { time: '3 AM', naukri: 3000, genai: 1398, flipkart: 2210 },
-  { time: '6 AM', naukri: 2000, genai: 9800, flipkart: 2290 },
-  { time: '9 AM', naukri: 2780, genai: 3908, flipkart: 2000 },
-  { time: '12 PM', naukri: 1890, genai: 4800, flipkart: 2181 },
-  { time: '3 PM', naukri: 2390, genai: 3800, flipkart: 2500 },
-  { time: '6 PM', naukri: 3490, genai: 4300, flipkart: 2100 },
+const apiConsumptionData = [
+  { app: 'Internal HR', volume: 1890 },
+  { app: 'Naukri', volume: 4000 },
+  { app: 'Flipkart', volume: 2181 },
+  { app: 'GenAI', volume: 9800 },
+  { app: 'Auth Service', volume: 2780 },
+  { app: 'Shipping API', volume: 2000 },
 ];
 
+
 // --- COMPONENTS ---
-
-const chartConfigLine = {
-  requests: {
-    label: "Requests",
-  },
-};
-
-const chartConfigArea = {
-  naukri: { label: "Naukri", color: "hsl(var(--chart-3))" },
-  genai: { label: "GenAI", color: "hsl(var(--chart-5))" },
-  flipkart: { label: "Flipkart", color: "hsl(var(--chart-2))" },
-};
-
 
 function AppHealthCard({ app }: { app: AppHealth }) {
   const StatusIndicator = () => {
@@ -133,39 +87,38 @@ function AppHealthCard({ app }: { app: AppHealth }) {
     }
   };
 
+  const getActionButton = () => {
+    switch(app.action) {
+      case 'Apply Hard Limit':
+        return <Button variant="destructive" size="sm"><Ban className="mr-2 h-4 w-4" />{app.action}</Button>
+      case 'Isolate DB':
+        return <Button variant="destructive" size="sm"><ShieldX className="mr-2 h-4 w-4" />{app.action}</Button>
+      case 'View Traffic':
+        return <Button variant="secondary" size="sm"><Eye className="mr-2 h-4 w-4" />{app.action}</Button>
+      default:
+        return null;
+    }
+  }
+
   return (
     <Card>
-      <CardHeader>
-        <CardTitle className="flex justify-between items-center text-lg">
+      <CardHeader className="pb-2">
+        <CardTitle className="flex justify-between items-start text-lg">
           <span>{app.name}</span>
           <StatusIndicator />
         </CardTitle>
         {app.statusText && (
-          <CardDescription className={cn(app.status === 'Critical' && 'text-red-400', app.status === 'Warning' && 'text-yellow-400')}>
+          <CardDescription className={cn('pt-1', app.status === 'Critical' && 'text-red-400', app.status === 'Warning' && 'text-yellow-400')}>
             {app.statusText}
           </CardDescription>
         )}
       </CardHeader>
-      <CardContent className="h-20 -m-4">
-        <ChartContainer config={chartConfigLine} className="h-full w-full">
-          <RechartsLineChart data={app.trafficData}>
-            <RechartsTooltip
-              content={<ChartTooltipContent indicator="dot" hideLabel />}
-              cursor={false}
-            />
-            <Line
-              type="monotone"
-              dataKey="requests"
-              stroke={
-                app.status === 'Critical' ? 'hsl(var(--destructive))' :
-                app.status === 'Warning' ? 'hsl(var(--chart-2))' :
-                'hsl(var(--primary))'
-              }
-              strokeWidth={2}
-              dot={false}
-            />
-          </RechartsLineChart>
-        </ChartContainer>
+      <CardContent className="flex justify-between items-end">
+        <div>
+          <span className="text-xs text-muted-foreground">Load</span>
+          <p className="text-2xl font-bold">{app.load}</p>
+        </div>
+        {getActionButton()}
       </CardContent>
     </Card>
   );
@@ -178,14 +131,34 @@ function MicroservicesTopology({ services }: { services: Microservice[] }) {
                 <CardTitle>Application-Aware Topology</CardTitle>
             </CardHeader>
             <CardContent className="h-[400px] relative">
+                 {/* Connections */}
+                <svg className="absolute top-0 left-0 w-full h-full" style={{ pointerEvents: 'none' }}>
+                    {services.map(service =>
+                        service.connections.map(connId => {
+                            const target = services.find(s => s.id === connId);
+                            if (!target) return null;
+                            const sourcePos = { x: parseInt(service.position.left), y: parseInt(service.position.top) };
+                            const targetPos = { x: parseInt(target.position.left), y: parseInt(target.position.top) };
+                            return (
+                                <line
+                                    key={`${service.id}-${connId}`}
+                                    x1={`${sourcePos.x}%`} y1={`${sourcePos.y}%`}
+                                    x2={`${targetPos.x}%`} y2={`${targetPos.y}%`}
+                                    className="stroke-slate-700" strokeWidth="2"
+                                />
+                            );
+                        })
+                    )}
+                </svg>
+                {/* Nodes */}
                 {services?.map(service => (
                     <TooltipProvider key={service.id}>
                         <Tooltip>
                             <TooltipTrigger asChild>
                                 <div
                                     className={cn(
-                                        "absolute -translate-x-1/2 -translate-y-1/2 rounded-full flex items-center justify-center cursor-pointer p-2 w-28 h-28 text-center text-xs font-semibold",
-                                        service.status === 'Healthy' ? 'bg-emerald-500/20 text-emerald-300' : 'bg-red-500/20 text-red-300',
+                                        "absolute -translate-x-1/2 -translate-y-1/2 rounded-full flex items-center justify-center cursor-pointer p-2 w-28 h-28 text-center text-xs font-semibold border-2",
+                                        service.status === 'Healthy' ? 'bg-emerald-900/50 text-emerald-300 border-emerald-500/50' : 'bg-red-900/50 text-red-300 border-red-500/50',
                                         service.status === 'Failing' && 'pulse-red'
                                     )}
                                     style={{ top: service.position.top, left: service.position.left }}
@@ -205,19 +178,27 @@ function MicroservicesTopology({ services }: { services: Microservice[] }) {
 }
 
 function ActiveThreatsFeed({ anomalies }: { anomalies: ThreatAnomaly[] }) {
+    const getActionIcon = (action: string) => {
+        if (action.toLowerCase().includes('quarantine')) return <ShieldX />;
+        if (action.toLowerCase().includes('throttle')) return <Zap />;
+        if (action.toLowerCase().includes('revoke')) return <KeySquare />;
+        return <Ban />;
+    }
+    
     return (
-        <Card className="col-span-1 md:col-span-2 xl:col-span-5">
+        <Card className="col-span-1 xl:col-span-5">
             <CardHeader>
-                <CardTitle>Active Threats & Anomalies</CardTitle>
+                <CardTitle>Active Anomaly Mitigation</CardTitle>
             </CardHeader>
             <CardContent>
                 <Table>
                     <TableHeader>
                         <TableRow>
                             <TableHead className="w-[100px]">Severity</TableHead>
-                            <TableHead>Target</TableHead>
+                            <TableHead>Target Application</TableHead>
+                            <TableHead>Source Endpoint/User</TableHead>
                             <TableHead>Issue</TableHead>
-                            <TableHead className="w-[120px]">Timestamp</TableHead>
+                            <TableHead className="text-right">Immediate Actions</TableHead>
                         </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -230,18 +211,25 @@ function ActiveThreatsFeed({ anomalies }: { anomalies: ThreatAnomaly[] }) {
                                             {anomaly.severity}
                                         </Badge>
                                     </TableCell>
-                                    <TableCell>
-                                      <div className="font-medium">{anomaly.target}</div>
-                                      {anomaly.assignee && <div className="text-sm text-muted-foreground">Assigned: {anomaly.assignee}</div>}
+                                    <TableCell><div className="font-medium">{anomaly.targetApp}</div></TableCell>
+                                    <TableCell className="font-mono text-sm">{anomaly.source}</TableCell>
+                                    <TableCell className="max-w-xs truncate">{anomaly.issue}</TableCell>
+                                    <TableCell className="text-right">
+                                        <div className="flex gap-2 justify-end">
+                                        {anomaly.actions.map(action => (
+                                            <Button key={action} variant="destructive" size="sm">
+                                                {getActionIcon(action)}
+                                                {action}
+                                            </Button>
+                                        ))}
+                                        </div>
                                     </TableCell>
-                                    <TableCell>{anomaly.issue}</TableCell>
-                                    <TableCell className="text-muted-foreground">{anomaly.timestamp}</TableCell>
                                 </TableRow>
                             )
                         })}
                         {!anomalies || anomalies.length === 0 && (
                             <TableRow>
-                                <TableCell colSpan={4} className="text-center text-muted-foreground">No active threats.</TableCell>
+                                <TableCell colSpan={5} className="text-center text-muted-foreground">No active threats.</TableCell>
                             </TableRow>
                         )}
                     </TableBody>
@@ -251,40 +239,28 @@ function ActiveThreatsFeed({ anomalies }: { anomalies: ThreatAnomaly[] }) {
     )
 }
 
-function ApiRequestsChart() {
+function ApiConsumptionChart() {
     return (
         <Card className="col-span-1 md:col-span-2 xl:col-span-2 flex flex-col">
             <CardHeader>
-                <CardTitle>API Requests Over Time</CardTitle>
-                <CardDescription>Breakdown of API consumption by application.</CardDescription>
+                <CardTitle>API Consumption by Target App</CardTitle>
+                <CardDescription>Request volume per application.</CardDescription>
             </CardHeader>
             <CardContent>
-                <ChartContainer config={chartConfigArea} className="h-64 w-full">
-                    <AreaChart
-                        data={apiRequestsData}
-                        margin={{ left: -20, top: 10, right: 10 }}
-                    >
-                        <CartesianGrid vertical={false} strokeDasharray="3 3" stroke="hsl(var(--border) / 0.5)"/>
-                        <XAxis
-                            dataKey="time"
-                            tickLine={false}
-                            axisLine={false}
-                            tickMargin={8}
-                            tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 12 }}
-                        />
-                        <YAxis
-                            tickLine={false}
-                            axisLine={false}
-                            tickMargin={8}
-                            tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 12 }}
-                            tickFormatter={(value) => `${Number(value) / 1000}k`}
-                        />
-                        <ChartTooltip content={<ChartTooltipContent indicator="dot" />} />
-                        <ChartLegend content={<ChartLegendContent />} />
-                        <Area dataKey="naukri" type="natural" fill="var(--color-naukri)" fillOpacity={0.1} stroke="var(--color-naukri)" stackId="a" />
-                        <Area dataKey="genai" type="natural" fill="var(--color-genai)" fillOpacity={0.1} stroke="var(--color-genai)" stackId="a" />
-                        <Area dataKey="flipkart" type="natural" fill="var(--color-flipkart)" fillOpacity={0.1} stroke="var(--color-flipkart)" stackId="a" />
-                    </AreaChart>
+                <ChartContainer config={{}} className="h-64 w-full">
+                     <ResponsiveContainer width="100%" height="100%">
+                        <BarChart data={apiConsumptionData} margin={{ left: -20, top: 10, right: 10 }}>
+                            <CartesianGrid vertical={false} strokeDasharray="3 3" stroke="hsl(var(--border) / 0.5)" />
+                            <XAxis dataKey="app" tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 12 }} tickLine={false} axisLine={false} />
+                            <YAxis tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 12 }} tickLine={false} axisLine={false} tickFormatter={(value) => `${Number(value) / 1000}k`} />
+                            <RechartsTooltip content={<ChartTooltipContent indicator="dot" />} cursor={{ fill: 'hsl(var(--accent))' }}/>
+                            <Bar dataKey="volume" radius={4}>
+                                {apiConsumptionData.map((entry) => (
+                                    <Cell key={entry.app} fill={entry.app === 'GenAI' ? 'hsl(var(--destructive))' : 'hsl(var(--primary))'} />
+                                ))}
+                            </Bar>
+                        </BarChart>
+                    </ResponsiveContainer>
                 </ChartContainer>
             </CardContent>
         </Card>
@@ -299,7 +275,7 @@ export default function OverviewPage() {
             </div>
             <div className="grid grid-cols-1 xl:grid-cols-5 gap-4">
                  <MicroservicesTopology services={topologyData} />
-                 <ApiRequestsChart />
+                 <ApiConsumptionChart />
             </div>
             <div className="grid grid-cols-1 xl:grid-cols-5 gap-4">
                  <ActiveThreatsFeed anomalies={threatsData} />

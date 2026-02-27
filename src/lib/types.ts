@@ -38,22 +38,23 @@ export type TimeSeriesData = {
     [key: string]: number | string;
 };
 
-// --- Overview Page (New Types) ---
+// --- Overview Page (New Granular Types) ---
 export type AppHealth = {
   id: string;
   name: string;
+  load: string;
   status: 'Healthy' | 'Warning' | 'Critical';
   statusText?: string;
-  trafficData: TimeSeriesData[];
+  action: 'View Traffic' | 'Apply Hard Limit' | 'Isolate DB';
 };
 
 export type ThreatAnomaly = {
     id: string;
     severity: Severity;
-    target: string;
-    assignee?: string;
+    targetApp: string;
+    source: string;
     issue: string;
-    timestamp: string;
+    actions: string[];
 };
 
 export type Microservice = {
@@ -178,6 +179,14 @@ export type TeamUser = {
   avatar: string;
   status: "Active" | "Invite Pending";
 };
+
+export type QuarantinedEndpoint = {
+  id: string;
+  hostname: string;
+  quarantinedAt: string;
+  reason: string;
+};
+
 
 // Profile Page
 export type UserProfile = {

@@ -1,6 +1,10 @@
 import type { OverviewData, ApiMonitoringData, NetworkTrafficData, EndpointSecurityData, DbMonitoringData, Incident, HeaderData, UserProfile, AccountActivity, ScheduledReport, RecentDownload, TeamUser } from './types';
 
-const API_URL = process.env.NEXT_PUBLIC_ATLAS_BACKEND_URL || "http://localhost:8000";
+// The API client now makes requests to the Next.js API routes (proxies)
+// instead of directly to the backend. The proxy routes will then forward the
+// request to the backend defined in the NEXT_PUBLIC_ATLAS_BACKEND_URL env var.
+// This avoids CORS issues in the browser.
+const API_URL = ""; 
 
 export class ApiError extends Error {
   status?: number;
@@ -61,9 +65,9 @@ export class AtlasApiClient {
       }
 
       if (!response.ok) {
-        const errorData = await response.json().catch(() => ({ detail: "Request failed with status " + response.status }));
+        const errorData = await response.json().catch(() => ({ detail: "Request failed with status " + response.status, error: "Request failed" }));
         throw new ApiError(
-          errorData.detail || `Request failed`,
+          errorData.error || errorData.detail || `Request failed`,
           response.status,
           errorData
         );
@@ -83,65 +87,33 @@ export class AtlasApiClient {
     }
   }
 
-  // Auth endpoints
-  async login(email: string, password: string) {
-    return this.makeRequest<{
-      access_token: string;
-      token_type: string;
-      role: string;
-      full_name: string;
-    }>("/api/auth/login", {
-      method: "POST",
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded'},
-      // FastAPI's OAuth2PasswordRequestForm expects form data
-      body: new URLSearchParams({
-        username: email,
-        password: password,
-      })
-    });
-  }
-
-  async signup(data: { email: string; full_name: string; password: string; role?: string; }) {
-    return this.makeRequest<{ message: string; email: string; role: string; }>("/api/auth/signup", {
-      method: "POST",
-      body: JSON.stringify(data),
-    });
-  }
-
-  async forgotPassword(email: string) {
-    return this.makeRequest<{ message: string }>("/api/auth/forgot-password", {
-      method: "POST",
-      body: JSON.stringify({ email }),
-    });
-  }
-
   // Dashboard endpoints
   async getOverview(env: string) {
-    return this.makeRequest<OverviewData>(`/api/dashboard/overview?env=${env}`);
+    return this.makeRequest<OverviewData>(`/api/overview?env=${env}`);
   }
 
   async getApiMonitoring(env: string) {
-    return this.makeRequest<ApiMonitoringData>(`/api/dashboard/api-monitoring?env=${env}`);
+    return this.makeRequest<ApiMonitoringData>(`/api/api-monitoring?env=${env}`);
   }
 
   async getNetworkTraffic(env: string) {
-    return this.makeRequest<NetworkTrafficData>(`/api/metrics/network?env=${env}`);
+    return this.makeRequest<NetworkTrafficData>(`/api/network-traffic?env=${env}`);
   }
 
   async getEndpointSecurity(env: string) {
-    return this.makeRequest<EndpointSecurityData>(`/api/dashboard/endpoint-security?env=${env}`);
+    return this.makeRequest<EndpointSecurityData>(`/api/endpoint-security?env=${env}`);
   }
 
   async getDbMonitoring(env: string) {
-    return this.makeRequest<DbMonitoringData>(`/api/dashboard/db-monitoring?env=${env}`);
+    return this.makeRequest<DbMonitoringData>(`/api/db-monitoring?env=${env}`);
   }
 
   async getIncidents(env: string) {
-    return this.makeRequest<Incident[]>(`/api/dashboard/incidents?env=${env}`);
+    return this.makeRequest<Incident[]>(`/api/incidents?env=${env}`);
   }
   
   async getHeaderData(env: string) {
-    return this.makeRequest<HeaderData>(`/api/dashboard/header-data?env=${env}`);
+    return this.makeRequest<HeaderData>(`/api/header-data?env=${env}`);
   }
 
   // Incident Actions
@@ -153,7 +125,7 @@ export class AtlasApiClient {
   }
 
   async quarantineDevice(workstationId: string) {
-    return this.makeRequest(`/api/endpoints/quarantine`, {
+    return this.makeRequest(`/api/endpoint-security/quarantine`, {
         method: 'POST',
         body: JSON.stringify({ workstationId }),
     });

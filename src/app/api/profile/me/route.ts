@@ -2,10 +2,9 @@ import { NextResponse } from 'next/server';
 
 const API_URL = process.env.NEXT_PUBLIC_ATLAS_BACKEND_URL || 'http://localhost:8000';
 
-// Generic request forwarder
 async function forwardRequest(request: Request) {
   const headers = new Headers(request.headers);
-  const url = `${API_URL}/api/users`;
+  const url = `${API_URL}/api/profile/me`;
 
   const response = await fetch(url, {
     method: request.method,
@@ -27,6 +26,6 @@ export async function GET(request: Request) {
   return forwardRequest(request);
 }
 
-export async function POST(request: Request) {
+export async function PUT(request: Request) {
   return forwardRequest(request);
 }

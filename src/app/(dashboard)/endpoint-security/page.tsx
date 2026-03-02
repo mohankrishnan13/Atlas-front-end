@@ -1,172 +1,234 @@
 "use client";
 
-import { useState, useEffect } from 'react';
+import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Laptop, ShieldAlert, ShieldX, Bug } from "lucide-react";
-import { cn, getSeverityClassNames } from "@/lib/utils";
-import type { Severity, EndpointSecurityData, OsDistribution, AlertTypeDistribution, WazuhEvent } from "@/lib/types";
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { useToast } from '@/hooks/use-toast';
-import { Skeleton } from '@/components/ui/skeleton';
-import { useEnvironment } from '@/context/EnvironmentContext';
-import { apiClient, ApiError } from '@/lib/api-client';
+import { Server, UserX, Unplug, Power, Ban, Bug } from "lucide-react";
+import {
+  ChartContainer,
+  ChartTooltip,
+  ChartTooltipContent,
+} from "@/components/ui/chart"
+import { Bar, BarChart, CartesianGrid, XAxis, YAxis, Tooltip as RechartsTooltip, ResponsiveContainer, Cell } from "recharts"
+import { cn } from '@/lib/utils';
 
-function StatCard({ title, value, subtext, icon: Icon, isLoading, isCritical }: { title: string, value?: string | number, subtext?: string, icon: React.ElementType, isLoading: boolean, isCritical?: boolean }) {
+// --- NEW MOCK DATA ---
+
+const kpiData = {
+    malwareInfections: 2,
+    policyViolations: ['WKST-1523', 'MAC-HR-02'],
+    highRiskUsers: ['john.doe', 'sarah.smith'],
+};
+
+const mostVulnerableData = [
+  { endpoint: 'WKST-2088', cves: 45 },
+  { endpoint: 'LAPTOP-DEV-04', cves: 31 },
+  { endpoint: 'DC-SERVER-01', cves: 24 },
+  { endpoint: 'MAC-FIN-05', cves: 18 },
+  { endpoint: 'WKST-ENG-15', cves: 9 },
+];
+
+const topViolatorsData = [
+  { user: 'sarah.smith', violations: 12 },
+  { user: 'mike.johnson', violations: 9 },
+  { user: 'david.wilson', violations: 7 },
+  { user: 'emily.jones', violations: 5 },
+  { user: 'admin', violations: 2 },
+];
+
+const endpointEventsData = [
+    { id: 1, timestamp: '2024-05-22 14:30:00', endpoint: 'WKST-2088', user: 'sarah.smith', threat: 'Suspicious process: cryptominer.exe', type: 'malware' },
+    { id: 2, timestamp: '2024-05-22 14:25:10', endpoint: 'WKST-1045', user: 'john.doe', threat: 'Unauthorized USB mass storage connected', type: 'usb' },
+    { id: 3, timestamp: '2024-05-22 14:22:55', endpoint: 'WKST-1523', user: 'admin', threat: 'Windows Defender Antivirus disabled manually', type: 'tampering' },
+    { id: 4, timestamp: '2024-05-22 14:18:40', endpoint: 'WKST-0892', user: 'david.wilson', threat: 'Unauthorized connection to External IP (Public): 185.220.101.45', type: 'network' },
+];
+
+
+// --- NEW WIDGETS / COMPONENTS ---
+
+const KpiCard = ({ title, data, actionText, actionIcon, actionVariant = 'destructive', dataClassName }: { title: string, data: React.ReactNode, actionText?: string, actionIcon?: React.ElementType, actionVariant?: "destructive" | "secondary" | "outline", dataClassName?: string }) => {
+    const ActionIcon = actionIcon;
     return (
-        <Card className={cn(isCritical && "bg-red-900/50 border-red-500/30")}>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">{title}</CardTitle>
-                <Icon className={cn("h-4 w-4 text-muted-foreground", isCritical && "text-red-400")} />
+        <Card className="flex flex-col justify-between">
+            <CardHeader>
+                <CardTitle className="text-base font-medium">{title}</CardTitle>
             </CardHeader>
             <CardContent>
-                 {isLoading ? <Skeleton className="h-8 w-24" /> : 
-                 <>
-                    <div className={cn("text-2xl font-bold", isCritical && "text-red-300")}>{value}</div>
-                    {subtext && <p className="text-xs text-muted-foreground">{subtext}</p>}
-                 </>
-                 }
+                <div className={cn("text-2xl font-bold", dataClassName)}>{data}</div>
+                {actionText && (
+                    <Button variant={actionVariant} size="sm" className="mt-4 w-full">
+                        {ActionIcon && <ActionIcon className="mr-2 h-4 w-4" />}
+                        {actionText}
+                    </Button>
+                )}
             </CardContent>
         </Card>
     )
 }
 
+const MostVulnerableEndpointsChart = () => (
+    <Card>
+        <CardHeader>
+            <CardTitle>Most Vulnerable Endpoints</CardTitle>
+            <CardDescription>Endpoints with the highest count of critical vulnerabilities (CVEs).</CardDescription>
+        </CardHeader>
+        <CardContent>
+            <ChartContainer config={{}} className="h-80 w-full">
+                 <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={mostVulnerableData} layout="vertical" margin={{ left: 100, top: 10, right: 10 }}>
+                        <CartesianGrid horizontal={false} strokeDasharray="3 3" stroke="hsl(var(--border) / 0.5)" />
+                        <XAxis type="number" tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 12 }} tickLine={false} axisLine={false} />
+                        <YAxis type="category" dataKey="endpoint" tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 12 }} tickLine={false} axisLine={false} width={100} />
+                        <RechartsTooltip content={<ChartTooltipContent />} cursor={{ fill: 'hsl(var(--accent))' }} />
+                        <Bar dataKey="cves" layout="vertical" radius={[0, 4, 4, 0]}>
+                            {mostVulnerableData.map((entry, index) => (
+                                <Cell key={`cell-${index}`} fill={
+                                    index === 0 ? 'hsl(var(--destructive))' :
+                                    index < 3 ? 'hsl(var(--chart-2))' : 'hsl(var(--chart-4))'
+                                } />
+                            ))}
+                        </Bar>
+                    </BarChart>
+                </ResponsiveContainer>
+            </ChartContainer>
+        </CardContent>
+    </Card>
+);
+
+const TopViolatorsChart = () => (
+    <Card>
+        <CardHeader>
+            <CardTitle>Top Endpoint Policy Violators</CardTitle>
+            <CardDescription>Users with the most security policy violations.</CardDescription>
+        </CardHeader>
+        <CardContent>
+            <ChartContainer config={{}} className="h-80 w-full">
+                 <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={topViolatorsData} margin={{ left: -20, top: 10, right: 10 }}>
+                        <CartesianGrid vertical={false} strokeDasharray="3 3" stroke="hsl(var(--border) / 0.5)" />
+                        <XAxis dataKey="user" tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 12 }} tickLine={false} axisLine={false} />
+                        <YAxis tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 12 }} tickLine={false} axisLine={false} />
+                        <RechartsTooltip content={<ChartTooltipContent indicator="dot" />} cursor={{ fill: 'hsl(var(--accent))' }}/>
+                        <Bar dataKey="violations" fill="hsl(var(--primary))" radius={4} />
+                    </BarChart>
+                </ResponsiveContainer>
+            </ChartContainer>
+        </CardContent>
+    </Card>
+);
+
 export default function EndpointSecurityPage() {
-    const { toast } = useToast();
-    const [data, setData] = useState<EndpointSecurityData | null>(null);
-    const [isLoading, setIsLoading] = useState(true);
-    const { environment } = useEnvironment();
-
-    useEffect(() => {
-        const fetchData = async () => {
-            setIsLoading(true);
-            try {
-                const result = await apiClient.getEndpointSecurity(environment);
-                setData(result);
-            } catch (error: any) {
-                console.error("Failed to fetch endpoint security data:", error);
-                const errorMessage = error instanceof ApiError ? error.message : "An unexpected error occurred.";
-                toast({
-                    variant: "destructive",
-                    title: "Failed to Load Endpoint Security Data",
-                    description: errorMessage,
-                });
-                setData(null);
-            } finally {
-                setIsLoading(false);
-            }
-        };
-        fetchData();
-    }, [toast, environment]);
-
-    const handleQuarantine = async (workstationId: string) => {
-        try {
-            await apiClient.quarantineDevice(workstationId);
-            toast({
-                title: "Quarantine Action",
-                description: `Device ${workstationId} has been sent to quarantine.`,
-            });
-            // Refetch data to show updated status
-            const result = await apiClient.getEndpointSecurity(environment);
-            setData(result);
-        } catch (error: any) {
-            console.error('Quarantine failed:', error);
-             toast({
-                title: "Error",
-                description: error.message || `Failed to quarantine device ${workstationId}.`,
-                variant: 'destructive',
-            });
+    
+    const getMitigationControls = (threatType: string) => {
+        switch (threatType) {
+            case 'malware':
+                return (
+                    <div className="flex gap-2 justify-end">
+                        <Button variant="outline" size="sm" className="border-orange-500/50 text-orange-400 hover:bg-orange-500/10 hover:text-orange-300">
+                            <Bug className="mr-2" /> Kill Process
+                        </Button>
+                        <Button variant="destructive" size="sm" className="bg-red-600 hover:bg-red-700">
+                            <Server className="mr-2" /> Quarantine Device
+                        </Button>
+                    </div>
+                );
+            case 'usb':
+                return (
+                    <Button variant="outline" size="sm" className="border-yellow-500/50 text-yellow-400 hover:bg-yellow-500/10 hover:text-yellow-300">
+                        <Unplug className="mr-2" /> Lock USB Ports
+                    </Button>
+                );
+            case 'tampering':
+                return (
+                    <Button variant="outline" size="sm" className="border-blue-500/50 text-blue-400 hover:bg-blue-500/10 hover:text-blue-300">
+                        <Power className="mr-2" /> Force Enable Defender
+                    </Button>
+                );
+            case 'network':
+                 return (
+                    <div className="flex gap-2 justify-end">
+                        <Button variant="outline" size="sm" className="border-orange-500/50 text-orange-400 hover:bg-orange-500/10 hover:text-orange-300">
+                            <Ban className="mr-2" /> Drop Connection
+                        </Button>
+                        <Button variant="destructive" size="sm" className="bg-red-600 hover:bg-red-700">
+                            <UserX className="mr-2" /> Lock User Account
+                        </Button>
+                    </div>
+                );
+            default:
+                return <Button variant="secondary" size="sm" disabled>No action available</Button>;
         }
     }
+
 
     return (
         <div className="space-y-8">
             <h1 className="text-3xl font-bold">Endpoint Security</h1>
+
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                <StatCard 
-                    title="Endpoint with Most Alerts" 
-                    value="LAPTOP-DEV-09"
-                    subtext="15 unresolved alerts"
-                    icon={Laptop} 
-                    isLoading={isLoading}
-                    isCritical
+                <KpiCard
+                    title="Active Malware Infections"
+                    data={`${kpiData.malwareInfections} Devices Compromised`}
+                    actionText="Isolate Devices"
+                    actionIcon={Server}
+                    dataClassName='text-red-400'
                 />
-                <StatCard 
-                    title="Most Frequent Alert Type" 
-                    value="Malware Detected" 
-                    subtext="42 instances today"
-                    icon={ShieldAlert} 
-                    isLoading={isLoading} 
-                    isCritical
+                <KpiCard
+                    title="Critical Policy Violations (AV Disabled)"
+                    data={<div className="font-mono text-base">{kpiData.policyViolations.join(', ')}</div>}
+                    actionText="Force Enable AV"
+                    actionIcon={Power}
+                    actionVariant="outline"
+                     dataClassName='text-orange-400'
                 />
-                <StatCard 
-                    title="Unpatched OS Detected" 
-                    value="Windows 10 (1809)" 
-                    subtext="Affecting 12 devices"
-                    icon={Bug} 
-                    isLoading={isLoading} 
+                 <KpiCard
+                    title="Users with High Anomaly Scores"
+                    data={<div className="font-mono text-base">{kpiData.highRiskUsers.join(', ')}</div>}
+                    dataClassName='text-yellow-400'
                 />
+            </div>
+
+            <div className="grid gap-4 md:grid-cols-2">
+                <MostVulnerableEndpointsChart />
+                <TopViolatorsChart />
             </div>
 
             <Card>
                 <CardHeader>
-                    <CardTitle>Wazuh Agent Event Log & Mitigation</CardTitle>
-                    <CardDescription>Live feed of endpoint alerts from the Wazuh agent, with immediate response actions.</CardDescription>
+                    <CardTitle>Endpoint Event Log & Mitigation</CardTitle>
+                    <CardDescription>Live feed of endpoint threats with context-aware response actions.</CardDescription>
                 </CardHeader>
                 <CardContent>
                     <Table>
                         <TableHeader>
                             <TableRow>
-                                <TableHead>Workstation ID</TableHead>
-                                <TableHead>Employee</TableHead>
-                                <TableHead>Alert Type</TableHead>
-                                <TableHead>Severity</TableHead>
-                                <TableHead className="text-right">Action</TableHead>
+                                <TableHead className="w-[180px]">Timestamp</TableHead>
+                                <TableHead>Endpoint & User</TableHead>
+                                <TableHead>Threat Description</TableHead>
+                                <TableHead className="text-right">Context-Aware Mitigation</TableHead>
                             </TableRow>
                         </TableHeader>
                         <TableBody>
-                            {isLoading && Array.from({length: 4}).map((_, i) => (
-                                <TableRow key={i}>
-                                    <TableCell colSpan={5}><Skeleton className="h-8 w-full" /></TableCell>
-                                </TableRow>
-                            ))}
-                            {!isLoading && data?.wazuhEvents.map((event: WazuhEvent) => {
-                                const severityClasses = getSeverityClassNames(event.severity as Severity);
-                                return (
+                            {endpointEventsData.map((event) => (
                                 <TableRow key={event.id}>
-                                    <TableCell className="font-mono">{event.workstationId}</TableCell>
+                                    <TableCell className="text-xs text-muted-foreground">{event.timestamp}</TableCell>
                                     <TableCell>
-                                        <div className="flex items-center gap-2">
-                                            <Avatar className="h-8 w-8">
-                                                <AvatarImage src={event.avatar} alt={event.employee} data-ai-hint="person face" />
-                                                <AvatarFallback>{event.employee.charAt(0)}</AvatarFallback>
-                                            </Avatar>
-                                            <span>{event.employee}</span>
-                                        </div>
+                                        <div className="font-mono text-white">{event.endpoint}</div>
+                                        <div className="text-xs text-muted-foreground">{event.user}</div>
                                     </TableCell>
-                                    <TableCell>{event.alert}</TableCell>
                                     <TableCell>
-                                        <Badge variant="outline" className={cn(severityClasses.badge)}>
-                                            {event.severity}
-                                        </Badge>
+                                        <Badge variant="destructive">{event.threat}</Badge>
                                     </TableCell>
                                     <TableCell className="text-right">
-                                        <Button 
-                                            variant="destructive" 
-                                            size="sm"
-                                            onClick={() => handleQuarantine(event.workstationId)}
-                                        >
-                                            <ShieldX className="mr-2 h-4 w-4" />
-                                            Quarantine Device
-                                        </Button>
+                                        {getMitigationControls(event.type)}
                                     </TableCell>
                                 </TableRow>
-                            )})}
-                             {!isLoading && (!data || data.wazuhEvents.length === 0) && (
+                            ))}
+                             {endpointEventsData.length === 0 && (
                                 <TableRow>
-                                    <TableCell colSpan={5} className="text-center text-muted-foreground">No Wazuh events to display.</TableCell>
+                                    <TableCell colSpan={4} className="text-center text-muted-foreground">No endpoint events to display.</TableCell>
                                 </TableRow>
                             )}
                         </TableBody>

@@ -17,7 +17,7 @@ import { cn } from "@/lib/utils";
 const newAnomaliesData = [
   { id: 1, timestamp: "2024-05-22 10:45:01 UTC", sourceEndpoint: 'LAPTOP-HR-02 (David)', targetApp: 'Naukri DB', port: '3389', type: 'Port Scan Detected', status: 'pending' },
   { id: 2, timestamp: "2024-05-22 10:42:15 UTC", sourceEndpoint: 'MAC-HR-02 (David Chen)', targetApp: 'Flipkart-Web', port: '443', type: 'Anomalous Traffic Spike', status: 'pending' },
-  { id: 3, timestamp: "2024-05-22 10:30:55 UTC", sourceEndpoint: '185.220.101.45 (External)', targetApp: 'GenAI-Inference-Node', port: '22', type: 'Brute Force SSH Attempt', status: 'blocked' },
+  { id: 3, timestamp: "2024-05-22 10:30:55 UTC", sourceEndpoint: 'External IP (Public): 185.220.101.45', targetApp: 'GenAI-Inference-Node', port: '22', type: 'Brute Force SSH Attempt', status: 'blocked' },
 ];
 
 
@@ -76,9 +76,9 @@ function TrafficFlowMap({ isLoading, environment }: { isLoading: boolean, enviro
                 <>
                     <div className="text-center space-y-2">
                         <div className="font-bold text-muted-foreground">{isLocal ? "Employee Workstations" : "External IPs"}</div>
-                        <div className="p-4 bg-muted rounded-lg font-mono">{isLocal ? "LAPTOP-HR-02" : "203.0.113.54"}</div>
+                        <div className="p-4 bg-muted rounded-lg font-mono">{isLocal ? "LAPTOP-HR-02" : "External IP (Public): 203.0.113.54"}</div>
                          <div className="flex items-center gap-2">
-                            <div className="p-4 bg-red-900/40 border border-red-500/30 rounded-lg font-mono text-red-300">185.220.101.45 (External)</div>
+                            <div className="p-4 bg-red-900/40 border border-red-500/30 rounded-lg font-mono text-red-300">External IP (Public): 185.220.101.45</div>
                             <Button variant="destructive" size="icon" className="h-8 w-8 shrink-0 bg-red-600/50 hover:bg-red-600/80 border border-red-500/50">
                                 <ShieldAlert className="h-4 w-4" />
                                 <span className="sr-only">Block at firewall</span>

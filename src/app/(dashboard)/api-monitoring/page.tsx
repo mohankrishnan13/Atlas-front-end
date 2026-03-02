@@ -89,7 +89,7 @@ const MostAbusedEndpointsChart = () => (
 // WIDGET 3: Top Consumers Table
 const topConsumersData = [
     { id: 1, consumer: 'api_bot_prod', targetApp: 'GenAI Service', calls: '27,010', cost: 3250.00, isOver: true },
-    { id: 2, consumer: '185.220.101.45', targetApp: 'Naukri Portal', calls: '120,450', cost: 2132.50, isOver: false },
+    { id: 2, consumer: 'External IP (Public): 185.220.101.45', targetApp: 'Naukri Portal', calls: '120,450', cost: 2132.50, isOver: false },
     { id: 3, consumer: 'internal_dashboard_svc', targetApp: 'Flipkart Internal', calls: '88,920', cost: 1890.00, isOver: false },
     { id: 4, consumer: 'partner_api_acme', targetApp: 'Payments Gateway', calls: '30,100', cost: 1105.20, isOver: false },
 ];
@@ -132,9 +132,9 @@ const TopConsumersTable = () => (
 
 // WIDGET 4: API Mitigation Table
 const apiMitigationData = [
-    { id: 1, target: 'GenAI Service', offender: '185.220.101.45', violation: 'Rate Limit Exceeded (1,250 req/m)', action: 'Enforce Hard Block' },
+    { id: 1, target: 'GenAI Service', offender: 'External IP (Public): 185.220.101.45', violation: 'Rate Limit Exceeded (1,250 req/m)', action: 'Enforce Hard Block' },
     { id: 2, target: 'Auth Service', offender: 'api_bot_suspicious', violation: 'Brute Force Login (842 failed attempts)', action: 'Lock Account' },
-    { id: 3, target: 'Payments Gateway', offender: '203.0.113.8', violation: 'Invalid API Key (300+ attempts)', action: 'Block IP' },
+    { id: 3, target: 'Payments Gateway', offender: 'External IP (Public): 203.0.113.8', violation: 'Invalid API Key (300+ attempts)', action: 'Block IP' },
 ];
 
 const ApiMitigationTable = () => (

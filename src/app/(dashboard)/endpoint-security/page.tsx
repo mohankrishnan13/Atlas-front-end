@@ -1,86 +1,33 @@
 "use client";
 
 import { useState, useEffect } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Laptop, WifiOff, ShieldAlert, ShieldX } from "lucide-react";
+import { Laptop, ShieldAlert, ShieldX, Bug } from "lucide-react";
 import { cn, getSeverityClassNames } from "@/lib/utils";
-import type { Severity, EndpointSecurityData, OsDistribution, AlertTypeDistribution } from "@/lib/types";
-import {
-  ChartContainer,
-  ChartTooltip,
-  ChartTooltipContent,
-} from "@/components/ui/chart"
-import { Pie, PieChart, Cell, ResponsiveContainer, Legend, Tooltip as RechartsTooltip } from "recharts"
+import type { Severity, EndpointSecurityData, OsDistribution, AlertTypeDistribution, WazuhEvent } from "@/lib/types";
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useEnvironment } from '@/context/EnvironmentContext';
 import { apiClient, ApiError } from '@/lib/api-client';
 
-function StatCard({ title, value, icon: Icon, isLoading }: { title: string, value?: string | number, icon: React.ElementType, isLoading: boolean }) {
+function StatCard({ title, value, subtext, icon: Icon, isLoading, isCritical }: { title: string, value?: string | number, subtext?: string, icon: React.ElementType, isLoading: boolean, isCritical?: boolean }) {
     return (
-        <Card>
+        <Card className={cn(isCritical && "bg-red-900/50 border-red-500/30")}>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium">{title}</CardTitle>
-                <Icon className="h-4 w-4 text-muted-foreground" />
+                <Icon className={cn("h-4 w-4 text-muted-foreground", isCritical && "text-red-400")} />
             </CardHeader>
             <CardContent>
-                 {isLoading ? <Skeleton className="h-8 w-24" /> : <div className="text-2xl font-bold">{value}</div>}
-            </CardContent>
-        </Card>
-    )
-}
-
-function OsDistributionChart({ data, isLoading }: { data?: OsDistribution[], isLoading: boolean }) {
-    return (
-        <Card>
-            <CardHeader>
-                <CardTitle>OS Distribution</CardTitle>
-            </CardHeader>
-            <CardContent className="h-[300px]">
-                {isLoading ? <Skeleton className="h-full w-full" /> :
-                <ChartContainer config={{}} className="h-full w-full">
-                    <ResponsiveContainer width="100%" height="100%">
-                        <PieChart>
-                            <Pie data={data} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={80}>
-                                {data?.map((entry, index) => (
-                                    <Cell key={`cell-${index}`} fill={entry.fill} />
-                                ))}
-                            </Pie>
-                            <RechartsTooltip content={<ChartTooltipContent hideLabel />} />
-                            <Legend />
-                        </PieChart>
-                    </ResponsiveContainer>
-                </ChartContainer>}
-            </CardContent>
-        </Card>
-    )
-}
-
-function AlertTypesChart({ data, isLoading }: { data?: AlertTypeDistribution[], isLoading: boolean }) {
-    return (
-        <Card>
-            <CardHeader>
-                <CardTitle>Alert Types</CardTitle>
-            </CardHeader>
-            <CardContent className="h-[300px]">
-                {isLoading ? <Skeleton className="h-full w-full" /> :
-                <ChartContainer config={{}} className="h-full w-full">
-                    <ResponsiveContainer width="100%" height="100%">
-                        <PieChart>
-                            <Pie data={data} dataKey="value" nameKey="name" cx="50%" cy="50%" innerRadius={60} outerRadius={80}>
-                                 {data?.map((entry, index) => (
-                                    <Cell key={`cell-${index}`} fill={entry.fill} />
-                                ))}
-                            </Pie>
-                            <RechartsTooltip content={<ChartTooltipContent hideLabel />} />
-                            <Legend />
-                        </PieChart>
-                    </ResponsiveContainer>
-                </ChartContainer>}
+                 {isLoading ? <Skeleton className="h-8 w-24" /> : 
+                 <>
+                    <div className={cn("text-2xl font-bold", isCritical && "text-red-300")}>{value}</div>
+                    {subtext && <p className="text-xs text-muted-foreground">{subtext}</p>}
+                 </>
+                 }
             </CardContent>
         </Card>
     )
@@ -121,6 +68,9 @@ export default function EndpointSecurityPage() {
                 title: "Quarantine Action",
                 description: `Device ${workstationId} has been sent to quarantine.`,
             });
+            // Refetch data to show updated status
+            const result = await apiClient.getEndpointSecurity(environment);
+            setData(result);
         } catch (error: any) {
             console.error('Quarantine failed:', error);
              toast({
@@ -135,19 +85,35 @@ export default function EndpointSecurityPage() {
         <div className="space-y-8">
             <h1 className="text-3xl font-bold">Endpoint Security</h1>
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                <StatCard title="Monitored Laptops" value={data?.monitoredLaptops} icon={Laptop} isLoading={isLoading} />
-                <StatCard title="Offline Devices" value={data?.offlineDevices} icon={WifiOff} isLoading={isLoading} />
-                <StatCard title="Malware Alerts" value={data?.malwareAlerts} icon={ShieldAlert} isLoading={isLoading} />
-            </div>
-
-            <div className="grid gap-4 md:grid-cols-2">
-                <OsDistributionChart data={data?.osDistribution} isLoading={isLoading} />
-                <AlertTypesChart data={data?.alertTypes} isLoading={isLoading} />
+                <StatCard 
+                    title="Endpoint with Most Alerts" 
+                    value="LAPTOP-DEV-09"
+                    subtext="15 unresolved alerts"
+                    icon={Laptop} 
+                    isLoading={isLoading}
+                    isCritical
+                />
+                <StatCard 
+                    title="Most Frequent Alert Type" 
+                    value="Malware Detected" 
+                    subtext="42 instances today"
+                    icon={ShieldAlert} 
+                    isLoading={isLoading} 
+                    isCritical
+                />
+                <StatCard 
+                    title="Unpatched OS Detected" 
+                    value="Windows 10 (1809)" 
+                    subtext="Affecting 12 devices"
+                    icon={Bug} 
+                    isLoading={isLoading} 
+                />
             </div>
 
             <Card>
                 <CardHeader>
-                    <CardTitle>Wazuh Agent Event Log</CardTitle>
+                    <CardTitle>Wazuh Agent Event Log & Mitigation</CardTitle>
+                    <CardDescription>Live feed of endpoint alerts from the Wazuh agent, with immediate response actions.</CardDescription>
                 </CardHeader>
                 <CardContent>
                     <Table>
@@ -166,7 +132,7 @@ export default function EndpointSecurityPage() {
                                     <TableCell colSpan={5}><Skeleton className="h-8 w-full" /></TableCell>
                                 </TableRow>
                             ))}
-                            {!isLoading && data?.wazuhEvents.map((event) => {
+                            {!isLoading && data?.wazuhEvents.map((event: WazuhEvent) => {
                                 const severityClasses = getSeverityClassNames(event.severity as Severity);
                                 return (
                                 <TableRow key={event.id}>

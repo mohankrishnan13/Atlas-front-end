@@ -1,10 +1,11 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { ArrowRight } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { ArrowRight, ShieldX, Ban } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { NetworkTrafficData, NetworkAnomaly } from "@/lib/types";
 import { useToast } from "@/hooks/use-toast";
@@ -12,6 +13,16 @@ import { useEnvironment } from "@/context/EnvironmentContext";
 import { apiClient, ApiError } from "@/lib/api-client";
 import { BarChart, Bar, CartesianGrid, XAxis, YAxis, Tooltip as RechartsTooltip, ResponsiveContainer, Cell } from "recharts"
 import { ChartContainer, ChartTooltipContent } from "@/components/ui/chart";
+
+
+// MOCK DATA
+const trafficAnomaliesData = [
+  { id: 1, sourceEndpoint: 'LAPTOP-DEV-09 (S. Jenkins)', targetApp: 'Naukri Database Cluster', protocol: 'TCP/3306', type: 'Unauthorized Port Scan', action: 'Isolate Endpoint' },
+  { id: 2, sourceEndpoint: '185.220.101.45 (External)', targetApp: 'GenAI-Inference-Node', protocol: 'UDP/53', type: 'DNS Tunneling Attempt', action: 'Block IP' },
+  { id: 3, sourceEndpoint: 'WKST-ENG-15 (M. Davis)', targetApp: 'Corporate Fileserver', protocol: 'SMB/445', type: 'Anomalous Data Exfiltration (3.5GB)', action: 'Isolate Endpoint' },
+  { id: 4, sourceEndpoint: 'CI-Runner-7 (Service)', targetApp: 'Flipkart-Web', protocol: 'TCP/22', type: 'Lateral Movement via SSH', action: 'Block Port 22' },
+];
+
 
 function TrafficFlowMap({ isLoading, environment }: { isLoading: boolean, environment: string }) {
     const isLocal = environment === 'local';
@@ -57,7 +68,8 @@ function TopRiskEndpointsChart() {
     return (
         <Card>
             <CardHeader>
-                <CardTitle>Top Risk Endpoints</CardTitle>
+                <CardTitle>Top Risk Endpoints by Anomaly Score</CardTitle>
+                <CardDescription>Endpoints with the highest threat scores based on network behavior.</CardDescription>
             </CardHeader>
             <CardContent>
                 <ChartContainer config={{}} className="h-[350px] w-full">
@@ -67,7 +79,7 @@ function TopRiskEndpointsChart() {
                             <XAxis type="number" tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 12 }} tickLine={false} axisLine={false} />
                             <YAxis type="category" dataKey="endpoint" tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 12 }} tickLine={false} axisLine={false} width={120} />
                             <RechartsTooltip content={<ChartTooltipContent />} cursor={{ fill: 'hsl(var(--accent))' }} />
-                            <Bar dataKey="score" layout="vertical" radius={4}>
+                            <Bar dataKey="score" name="Anomaly Score" layout="vertical" radius={4}>
                                 {data.map((entry, index) => (
                                     <Cell key={`cell-${index}`} fill={entry.score > 80 ? 'hsl(var(--destructive))' : entry.score > 60 ? 'hsl(var(--chart-2))' : 'hsl(var(--primary))'} />
                                 ))}
@@ -90,8 +102,10 @@ export default function NetworkTrafficPage() {
         const fetchData = async () => {
             setIsLoading(true);
             try {
-                const result = await apiClient.getNetworkTraffic(environment);
-                setData(result);
+                // In a real app, this would be one API call.
+                // We simulate a delay then set mock data.
+                await new Promise(resolve => setTimeout(resolve, 1000));
+                setData({ networkAnomalies: trafficAnomaliesData } as NetworkTrafficData);
             } catch (error: any) {
                 console.error("Failed to fetch network traffic data:", error);
                 const errorMessage = error instanceof ApiError ? error.message : "An unexpected error occurred.";
@@ -108,6 +122,12 @@ export default function NetworkTrafficPage() {
         fetchData();
     }, [toast, environment]);
 
+    const getActionIcon = (action: string) => {
+        if (action.toLowerCase().includes('isolate')) return <ShieldX />;
+        if (action.toLowerCase().includes('block')) return <Ban />;
+        return <ShieldX />;
+    }
+
     return (
         <div className="space-y-8">
             <h1 className="text-3xl font-bold">Network Traffic Analysis</h1>
@@ -119,7 +139,7 @@ export default function NetworkTrafficPage() {
 
             <Card>
                 <CardHeader>
-                    <CardTitle>Active Network Anomalies</CardTitle>
+                    <CardTitle>Active Network Anomaly Mitigation</CardTitle>
                 </CardHeader>
                 <CardContent>
                     <Table>
@@ -127,31 +147,38 @@ export default function NetworkTrafficPage() {
                             <TableRow>
                                 <TableHead>Source Endpoint</TableHead>
                                 <TableHead>Target Application</TableHead>
-                                <TableHead>Port</TableHead>
+                                <TableHead>Protocol/Port</TableHead>
                                 <TableHead>Anomaly Type</TableHead>
+                                <TableHead className="text-right">Action</TableHead>
                             </TableRow>
                         </TableHeader>
                         <TableBody>
                             {isLoading && Array.from({length: 4}).map((_, i) => (
                                 <TableRow key={i}>
-                                    <TableCell colSpan={4}><Skeleton className="h-6 w-full" /></TableCell>
+                                    <TableCell colSpan={5}><Skeleton className="h-6 w-full" /></TableCell>
                                 </TableRow>
                             ))}
-                            {!isLoading && data?.networkAnomalies.map((anomaly) => (
+                            {!isLoading && data?.networkAnomalies.map((anomaly: any) => (
                                 <TableRow key={anomaly.id}>
                                     <TableCell className="font-mono">{anomaly.sourceEndpoint}</TableCell>
                                     <TableCell>
                                         <Badge variant="outline">{anomaly.targetApp}</Badge>
                                     </TableCell>
-                                    <TableCell>{anomaly.port}</TableCell>
+                                    <TableCell className="font-mono text-xs">{anomaly.protocol}</TableCell>
                                     <TableCell>
                                         <Badge variant="destructive">{anomaly.type}</Badge>
+                                    </TableCell>
+                                    <TableCell className="text-right">
+                                        <Button variant="destructive" size="sm">
+                                            {getActionIcon(anomaly.action)}
+                                            {anomaly.action}
+                                        </Button>
                                     </TableCell>
                                 </TableRow>
                             ))}
                              {!isLoading && (!data || data.networkAnomalies.length === 0) && (
                                 <TableRow>
-                                    <TableCell colSpan={4} className="text-center text-muted-foreground">No network anomalies detected.</TableCell>
+                                    <TableCell colSpan={5} className="text-center text-muted-foreground">No network anomalies detected.</TableCell>
                                 </TableRow>
                             )}
                         </TableBody>

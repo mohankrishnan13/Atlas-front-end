@@ -1,21 +1,16 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Hourglass, Users, PackageOpen } from "lucide-react";
-import { Skeleton } from "@/components/ui/skeleton";
-import type { DbMonitoringData } from "@/lib/types";
+import { Button } from "@/components/ui/button";
+import { ShieldX, UserX, ServerCrash } from "lucide-react";
 import {
   ChartContainer,
   ChartTooltip,
   ChartTooltipContent,
 } from "@/components/ui/chart"
-import { Area, AreaChart, CartesianGrid, XAxis, YAxis, Tooltip as RechartsTooltip, ResponsiveContainer, Legend } from "recharts"
-import { useToast } from "@/hooks/use-toast";
-import { useEnvironment } from "@/context/EnvironmentContext";
-import { apiClient, ApiError } from "@/lib/api-client";
+import { Bar, BarChart, CartesianGrid, XAxis, YAxis, Tooltip as RechartsTooltip, ResponsiveContainer, Legend } from "recharts"
 
 const chartConfig = {
   SELECT: { label: "SELECT", color: "hsl(var(--chart-1))" },
@@ -24,118 +19,99 @@ const chartConfig = {
   DELETE: { label: "DELETE", color: "hsl(var(--chart-5))" },
 };
 
-function StatCard({ title, value, unit, icon: Icon, isLoading }: { title: string, value?: string | number, unit?: string, icon: React.ElementType, isLoading: boolean }) {
+const dbOperationsData = [
+  { table: 'users', SELECT: 45000, INSERT: 1200, UPDATE: 800, DELETE: 50 },
+  { table: 'products', SELECT: 85000, INSERT: 200, UPDATE: 500, DELETE: 10 },
+  { table: 'orders', SELECT: 75000, INSERT: 15000, UPDATE: 12000, DELETE: 2500 },
+  { table: 'sessions', SELECT: 22000, INSERT: 22000, UPDATE: 22000, DELETE: 22000 },
+  { table: 'audit_logs', SELECT: 5000, INSERT: 89000, UPDATE: 0, DELETE: 0 },
+];
+
+const suspiciousActivityData = [
+    { id: 1, app: 'GenAI Service', user: 'prod_read_only_role', type: 'UPDATE', table: 'user_permissions', reason: 'Read-only role attempted privilege escalation.', action: 'Revoke Role Access' },
+    { id: 2, app: 'Naukri Portal', user: '[LAPTOP-DEV-09]', type: 'SELECT *', table: 'candidates', reason: 'Excessive data export (300k rows) from sensitive table.', action: 'Lock User Account' },
+    { id: 3, app: 'Flipkart DB', user: 'automated_script_03', type: 'DELETE', table: 'product_reviews', reason: 'Anomalous bulk deletion of 50k+ records.', action: 'Isolate DB Instance' },
+];
+
+function DbOperationsChart() {
     return (
         <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">{title}</CardTitle>
-                <Icon className="h-4 w-4 text-muted-foreground" />
+            <CardHeader>
+                <CardTitle>DB Operations by Target Table</CardTitle>
+                <CardDescription>Operations per minute, grouped by table.</CardDescription>
             </CardHeader>
             <CardContent>
-                {isLoading ? <Skeleton className="h-8 w-24" /> : 
-                <div className="text-2xl font-bold">
-                    {value}
-                    {unit && <span className="text-xs text-muted-foreground ml-1">{unit}</span>}
-                </div>}
+                <ChartContainer config={chartConfig} className="h-96 w-full">
+                    <ResponsiveContainer width="100%" height="100%">
+                        <BarChart data={dbOperationsData} layout="vertical" stackOffset="expand">
+                             <CartesianGrid horizontal={false} strokeDasharray="3 3" stroke="hsl(var(--border) / 0.5)" />
+                            <XAxis type="number" tickFormatter={(value) => `${value * 100}%`} tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 12 }} />
+                            <YAxis type="category" dataKey="table" tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 12 }} width={100} />
+                            <RechartsTooltip content={<ChartTooltipContent hideLabel />} cursor={{ fill: 'hsl(var(--accent))' }} />
+                            <Legend />
+                            <Bar dataKey="SELECT" stackId="a" fill="hsl(var(--chart-1))" />
+                            <Bar dataKey="INSERT" stackId="a" fill="hsl(var(--chart-2))" />
+                            <Bar dataKey="UPDATE" stackId="a" fill="hsl(var(--chart-3))" />
+                            <Bar dataKey="DELETE" stackId="a" fill="hsl(var(--chart-5))" radius={[0, 4, 4, 0]} />
+                        </BarChart>
+                    </ResponsiveContainer>
+                </ChartContainer>
             </CardContent>
         </Card>
-    )
+    );
 }
 
-export default function DatabaseMonitoringPage() {
-    const [data, setData] = useState<DbMonitoringData | null>(null);
-    const [isLoading, setIsLoading] = useState(true);
-    const { toast } = useToast();
-    const { environment } = useEnvironment();
 
-     useEffect(() => {
-        const fetchData = async () => {
-            setIsLoading(true);
-            try {
-                const result = await apiClient.getDbMonitoring(environment);
-                setData(result);
-            } catch (error: any) {
-                console.error("Failed to fetch database monitoring data:", error);
-                const errorMessage = error instanceof ApiError ? error.message : "An unexpected error occurred.";
-                toast({
-                    variant: "destructive",
-                    title: "Failed to Load Database Monitoring Data",
-                    description: errorMessage,
-                });
-                setData(null);
-            } finally {
-                setIsLoading(false);
-            }
-        };
-        fetchData();
-    }, [toast, environment]);
+export default function DatabaseMonitoringPage() {
+    
+    const getActionIcon = (action: string) => {
+        if (action.toLowerCase().includes('lock')) return <UserX />;
+        if (action.toLowerCase().includes('isolate')) return <ServerCrash />;
+        if (action.toLowerCase().includes('revoke')) return <ShieldX />;
+        return <ShieldX />;
+    }
 
     return (
         <div className="space-y-8">
             <h1 className="text-3xl font-bold">Database Monitoring</h1>
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                <StatCard title="Active Connections" value={data?.activeConnections} icon={Users} isLoading={isLoading} />
-                <StatCard title="Avg Query Latency" value={data?.avgQueryLatency} unit="ms" icon={Hourglass} isLoading={isLoading} />
-                <StatCard title="Data Export Volume (24h)" value={data?.dataExportVolume} unit="TB" icon={PackageOpen} isLoading={isLoading} />
-            </div>
+            
+            <DbOperationsChart />
 
             <Card>
                 <CardHeader>
-                    <CardTitle>Database Operations</CardTitle>
-                </CardHeader>
-                <CardContent className="h-[400px]">
-                    {isLoading ? <Skeleton className="h-full w-full" /> :
-                     <ChartContainer config={chartConfig} className="h-full w-full">
-                        <ResponsiveContainer width="100%" height="100%">
-                            <AreaChart data={data?.operationsChart} margin={{ top: 5, right: 20, left: -10, bottom: 5 }}>
-                                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--border) / 0.5)" />
-                                <XAxis dataKey="name" tick={{ fill: 'hsl(var(--muted-foreground))' }} tickLine={false} axisLine={false} fontSize={12} />
-                                <YAxis tick={{ fill: 'hsl(var(--muted-foreground))' }} tickLine={false} axisLine={false} fontSize={12} tickFormatter={(value) => `${value / 1000}k`} />
-                                <RechartsTooltip content={<ChartTooltipContent indicator="dot" />} />
-                                <Legend />
-                                <Area type="monotone" dataKey="SELECT" stackId="1" stroke="hsl(var(--chart-1))" fill="hsl(var(--chart-1) / 0.1)" />
-                                <Area type="monotone" dataKey="INSERT" stackId="1" stroke="hsl(var(--chart-2))" fill="hsl(var(--chart-2) / 0.1)" />
-                                <Area type="monotone" dataKey="UPDATE" stackId="1" stroke="hsl(var(--chart-3))" fill="hsl(var(--chart-3) / 0.1)" />
-                                <Area type="monotone" dataKey="DELETE" stackId="1" stroke="hsl(var(--chart-5))" fill="hsl(var(--chart-5) / 0.1)" />
-                            </AreaChart>
-                        </ResponsiveContainer>
-                    </ChartContainer>}
-                </CardContent>
-            </Card>
-
-            <Card>
-                <CardHeader>
-                    <CardTitle>Suspicious DB Activity</CardTitle>
+                    <CardTitle>Suspicious DB Activity & Mitigation</CardTitle>
                 </CardHeader>
                 <CardContent>
                     <Table>
                         <TableHeader>
                             <TableRow>
                                 <TableHead>Originating Application</TableHead>
-                                <TableHead>User/Service</TableHead>
+                                <TableHead>User / Endpoint</TableHead>
                                 <TableHead>Query Type</TableHead>
                                 <TableHead>Target Table</TableHead>
                                 <TableHead>Reason for Flag</TableHead>
+                                <TableHead className="text-right">Action</TableHead>
                             </TableRow>
                         </TableHeader>
                         <TableBody>
-                            {isLoading && Array.from({length: 4}).map((_, i) => (
-                                <TableRow key={i}>
-                                    <TableCell colSpan={5}><Skeleton className="h-6 w-full" /></TableCell>
-                                </TableRow>
-                            ))}
-                            {!isLoading && data?.suspiciousActivity.map((activity) => (
+                            {suspiciousActivityData.map((activity) => (
                                 <TableRow key={activity.id}>
                                     <TableCell><Badge variant="outline">{activity.app}</Badge></TableCell>
                                     <TableCell className="font-mono">{activity.user}</TableCell>
                                     <TableCell><Badge variant="secondary">{activity.type}</Badge></TableCell>
                                     <TableCell className="font-mono">{activity.table}</TableCell>
-                                    <TableCell className="text-yellow-400">{activity.reason}</TableCell>
+                                    <TableCell className="text-yellow-400 max-w-xs">{activity.reason}</TableCell>
+                                    <TableCell className="text-right">
+                                        <Button variant="destructive" size="sm">
+                                            {getActionIcon(activity.action)}
+                                            {activity.action}
+                                        </Button>
+                                    </TableCell>
                                 </TableRow>
                             ))}
-                            {!isLoading && (!data || data.suspiciousActivity.length === 0) && (
+                            {suspiciousActivityData.length === 0 && (
                                 <TableRow>
-                                    <TableCell colSpan={5} className="text-center text-muted-foreground">No suspicious activity detected.</TableCell>
+                                    <TableCell colSpan={6} className="text-center text-muted-foreground">No suspicious activity detected.</TableCell>
                                 </TableRow>
                             )}
                         </TableBody>

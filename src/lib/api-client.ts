@@ -77,7 +77,13 @@ export class AtlasApiClient {
         return {} as T;
       }
 
-      return await response.json();
+      const responseText = await response.text();
+      if (!responseText) {
+        return {} as T;
+      }
+      
+      return JSON.parse(responseText);
+
     } catch (error) {
         if (error instanceof ApiError) {
             throw error;

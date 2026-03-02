@@ -28,7 +28,7 @@ const navItems: NavItem[] = [
   { title: 'Network Traffic', href: '/network-traffic', icon: Network },
   { title: 'Endpoint Security', href: '/endpoint-security', icon: Laptop },
   { title: 'Database Monitoring', href: '/database-monitoring', icon: Database },
-  { title: 'Incidents', href: '/incidents', icon: ShieldCheck },
+  { title: 'Case Management', href: '/incidents', icon: ShieldCheck },
   { title: 'Reports', href: '/reports', icon: FileText },
   { title: 'Settings', href: '/settings', icon: Settings },
 ];

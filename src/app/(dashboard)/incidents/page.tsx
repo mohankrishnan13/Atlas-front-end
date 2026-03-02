@@ -165,7 +165,7 @@ export default function IncidentsPage() {
     
     return (
         <div className="space-y-8">
-            <h1 className="text-3xl font-bold">Incident Case Management</h1>
+            <h1 className="text-3xl font-bold">Case Management</h1>
 
             <div className="grid grid-cols-1 lg:grid-cols-[300px_1fr] gap-8 items-start">
                 <FiltersSidebar />

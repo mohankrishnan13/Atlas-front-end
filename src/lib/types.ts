@@ -175,7 +175,8 @@ export type TeamUser = {
   id: number;
   name: string;
   email: string;
-  role: "Admin" | "Analyst";
+  role: "Global Admin" | "Tier 1 Analyst";
+  scope?: string[];
   avatar: string;
   status: "Active" | "Invite Pending";
 };

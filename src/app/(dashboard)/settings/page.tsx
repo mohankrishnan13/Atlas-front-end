@@ -13,13 +13,10 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogTrigger } from '@/components/ui/dialog';
-import { Cog, SlidersHorizontal, Shield, BrainCircuit, Users, AlertTriangle, Search, PlusCircle, Trash2 } from 'lucide-react';
+import { Cog, SlidersHorizontal, Shield, BrainCircuit, Users, AlertTriangle, Search, PlusCircle, Trash2, Edit } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
-import { apiClient, ApiError } from '@/lib/api-client';
 import type { TeamUser, QuarantinedEndpoint } from '@/lib/types';
-import { Skeleton } from '@/components/ui/skeleton';
-
 
 type Tab = 'general' | 'alert-tuning' | 'containment' | 'ml-baselines' | 'user-access';
 
@@ -43,57 +40,42 @@ const mockQuarantinedEndpoints: QuarantinedEndpoint[] = [
     { id: '2', hostname: 'MAC-HR-02', quarantinedAt: '2024-05-21 10:15:22 UTC', reason: 'Firewall disabled by user' },
 ]
 
+const mockTeamUsers: TeamUser[] = [
+    { id: 1, name: 'Jane Doe', email: 'jane.doe@atlas.com', role: 'Global Admin', scope: ['All Applications'], avatar: '', status: 'Active' },
+    { id: 2, name: 'John Smith', email: 'john.smith@atlas.com', role: 'Tier 1 Analyst', scope: ['Naukri', 'Flipkart'], avatar: '', status: 'Active' },
+    { id: 3, name: 'Peter Jones', email: 'peter.jones@atlas.com', role: 'Tier 1 Analyst', scope: ['GenAI'], avatar: '', status: 'Invite Pending' },
+];
+
 
 function UserAccessTab() {
     const { toast } = useToast();
-    const [users, setUsers] = useState<TeamUser[]>([]);
-    const [isLoading, setIsLoading] = useState(true);
+    const [users, setUsers] = useState<TeamUser[]>(mockTeamUsers);
     const [isDialogOpen, setIsDialogOpen] = useState(false);
 
-    const fetchUsers = async () => {
-        setIsLoading(true);
-        try {
-            const data = await apiClient.getUsers();
-            setUsers(data);
-        } catch (error: any) {
-            const errorMessage = error instanceof ApiError ? error.message : "An unexpected error occurred.";
-            toast({ variant: 'destructive', title: 'Failed to load users', description: errorMessage });
-        } finally {
-            setIsLoading(false);
-        }
-    };
-
-    useEffect(() => {
-        fetchUsers();
-    }, []);
-
     const { control, handleSubmit, reset } = useForm({
-        defaultValues: { name: '', email: '', role: 'Analyst' }
+        defaultValues: { name: '', email: '', role: 'Tier 1 Analyst' as "Global Admin" | "Tier 1 Analyst" }
     });
 
-    const handleAddUser = async (data: any) => {
-        try {
-            await apiClient.createUser(data);
-            toast({ title: 'User Invited', description: `${data.name} has been invited to join ATLAS.` });
-            setIsDialogOpen(false);
-            reset();
-            fetchUsers();
-        } catch (error: any) {
-            const errorMessage = error instanceof ApiError ? error.message : "An unexpected error occurred.";
-            toast({ variant: 'destructive', title: 'Failed to invite user', description: errorMessage });
-        }
+    const handleAddUser = (data: {name: string, email: string, role: "Global Admin" | "Tier 1 Analyst"}) => {
+        const newUser: TeamUser = {
+            id: Math.max(...users.map(u => u.id), 0) + 1,
+            name: data.name,
+            email: data.email,
+            role: data.role,
+            scope: data.role === 'Global Admin' ? ['All Applications'] : [],
+            avatar: '',
+            status: 'Invite Pending'
+        };
+        setUsers(prev => [...prev, newUser]);
+        toast({ title: 'User Invited', description: `${data.name} has been invited to join ATLAS.` });
+        setIsDialogOpen(false);
+        reset();
     };
     
-    const handleDeleteUser = async (userId: number, userName: string) => {
+    const handleDeleteUser = (userId: number, userName: string) => {
         if (!confirm(`Are you sure you want to revoke access for ${userName}?`)) return;
-        try {
-            await apiClient.deleteUser(userId);
-            toast({ title: 'User Access Revoked', description: `Access for ${userName} has been revoked.` });
-            fetchUsers();
-        } catch (error: any) {
-            const errorMessage = error instanceof ApiError ? error.message : "An unexpected error occurred.";
-            toast({ variant: 'destructive', title: 'Failed to revoke access', description: errorMessage });
-        }
+        setUsers(prev => prev.filter(u => u.id !== userId));
+        toast({ title: 'User Access Revoked', description: `Access for ${userName} has been revoked.` });
     };
 
     return (
@@ -111,7 +93,7 @@ function UserAccessTab() {
                         <DialogTrigger asChild>
                             <Button className="bg-emerald-600 hover:bg-emerald-700 text-white">
                                 <PlusCircle className="mr-2 h-4 w-4" />
-                                Add New User
+                                Invite Team Member
                             </Button>
                         </DialogTrigger>
                         <DialogContent>
@@ -128,8 +110,8 @@ function UserAccessTab() {
                                         <Select onValueChange={field.onChange} defaultValue={field.value}>
                                             <SelectTrigger><SelectValue /></SelectTrigger>
                                             <SelectContent>
-                                                <SelectItem value="Analyst">Analyst</SelectItem>
-                                                <SelectItem value="Admin">Admin</SelectItem>
+                                                <SelectItem value="Tier 1 Analyst">Tier 1 Analyst</SelectItem>
+                                                <SelectItem value="Global Admin">Global Admin</SelectItem>
                                             </SelectContent>
                                         </Select>
                                     </div>
@@ -146,24 +128,14 @@ function UserAccessTab() {
                         <TableRow>
                             <TableHead>User</TableHead>
                             <TableHead>Role</TableHead>
+                            <TableHead>App Access Scope</TableHead>
                             <TableHead>Status</TableHead>
                             <TableHead className="text-right">Actions</TableHead>
                         </TableRow>
                     </TableHeader>
                     <TableBody>
-                        {isLoading && Array.from({length: 3}).map((_, i) => (
-                             <TableRow key={i}>
-                                <TableCell className="flex items-center gap-3">
-                                    <Skeleton className="w-9 h-9 rounded-full" />
-                                    <div className="space-y-1"><Skeleton className="h-4 w-24" /><Skeleton className="h-3 w-32" /></div>
-                                </TableCell>
-                                <TableCell><Skeleton className="h-6 w-16 rounded-full" /></TableCell>
-                                <TableCell><Skeleton className="h-4 w-20" /></TableCell>
-                                <TableCell className="text-right"><Skeleton className="h-8 w-24" /></TableCell>
-                            </TableRow>
-                        ))}
-                        {!isLoading && users.map((user) => (
-                            <TableRow key={user.email}>
+                        {users.map((user) => (
+                            <TableRow key={user.id}>
                                 <TableCell>
                                     <div className="flex items-center gap-3">
                                         <Avatar className="w-9 h-9">
@@ -176,7 +148,12 @@ function UserAccessTab() {
                                     </div>
                                 </TableCell>
                                 <TableCell>
-                                    <Badge variant="outline" className={user.role === 'Admin' ? 'bg-purple-600/20 text-purple-300 border-purple-500/30' : 'bg-blue-600/20 text-blue-300 border-blue-500/30'}>{user.role}</Badge>
+                                    <Badge variant="outline" className={user.role === 'Global Admin' ? 'bg-purple-600/20 text-purple-300 border-purple-500/30' : 'bg-blue-600/20 text-blue-300 border-blue-500/30'}>{user.role}</Badge>
+                                </TableCell>
+                                <TableCell className="flex items-center gap-1">
+                                    {user.scope?.map(app => (
+                                        <Badge key={app} variant="secondary">{app}</Badge>
+                                    ))}
                                 </TableCell>
                                 <TableCell>
                                     <div className="flex items-center gap-2">
@@ -185,9 +162,14 @@ function UserAccessTab() {
                                     </div>
                                 </TableCell>
                                 <TableCell className="text-right">
-                                    <Button variant="ghost" size="icon" onClick={() => handleDeleteUser(user.id, user.name)}>
-                                        <Trash2 className="h-4 w-4 text-red-500" />
-                                    </Button>
+                                    <div className="flex gap-2 justify-end">
+                                        <Button variant="outline" size="sm"><Edit /> Edit</Button>
+                                        {user.role !== 'Global Admin' && (
+                                            <Button variant="destructive" size="sm" onClick={() => handleDeleteUser(user.id, user.name)}>
+                                                <Trash2 /> Revoke Access
+                                            </Button>
+                                        )}
+                                    </div>
                                 </TableCell>
                             </TableRow>
                         ))}
@@ -213,7 +195,6 @@ export default function SettingsPage() {
   const [hardBlock, setHardBlock] = useState([mockAppSettings.global.hardBlock]);
   const [accumulationWindow, setAccumulationWindow] = useState([mockAppSettings.global.accumulationWindow]);
 
-  const [emailAlerts, setEmailAlerts] = useState(true);
   const [autoQuarantine, setAutoQuarantine] = useState(true);
   const [trainingWindow, setTrainingWindow] = useState(30);
   const [modelSensitivity, setModelSensitivity] = useState('balanced');
@@ -229,7 +210,7 @@ export default function SettingsPage() {
     setAccumulationWindow([newSettings.accumulationWindow]);
   }, [selectedApp]);
 
-  const selectedAppName = navItems.find(item => item.id === selectedApp)?.label || 'Global';
+  const selectedAppName = selectedApp === 'global' ? 'Global Defaults' : navItems.find(item => item.id === selectedApp)?.label || 'Global';
 
 
   const renderContent = () => {
@@ -273,18 +254,49 @@ export default function SettingsPage() {
             </CardHeader>
             <CardContent className="space-y-8">
               <div className="space-y-4">
-                <Label>Critical Alert Threshold (Score {criticalThreshold[0]}-100)</Label>
+                <Label>Critical Anomaly Score for {selectedAppName} (Score {criticalThreshold[0]}-100)</Label>
                 <Slider value={criticalThreshold} onValueChange={setCriticalThreshold} max={100} min={80} step={1} className="[&>span]:bg-red-500" />
               </div>
                <div className="space-y-4">
-                <Label>Warning Alert Threshold (Score {warningThreshold[0]}-79)</Label>
+                <Label>Warning Anomaly Score for {selectedAppName} (Score {warningThreshold[0]}-79)</Label>
                 <Slider value={warningThreshold} onValueChange={setWarningThreshold} max={79} min={50} step={1} className="[&>span]:bg-orange-500" />
               </div>
               <div className="space-y-4 pt-4 border-t border-slate-800">
-                <h4 className="text-lg font-semibold">Notifications</h4>
+                <h4 className="text-lg font-semibold">Notification Routing</h4>
                  <div className="flex items-center justify-between p-4 bg-muted rounded-lg">
-                    <Label htmlFor="email-alerts" className="font-medium">Enable Email Alerts for Critical Incidents</Label>
-                    <Switch id="email-alerts" checked={emailAlerts} onCheckedChange={setEmailAlerts} />
+                    <div>
+                        <h5 className="font-semibold">Critical Alerts Route</h5>
+                        <Select defaultValue="slack">
+                            <SelectTrigger className="w-[280px] mt-2">
+                                <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="slack">Slack Channel (#secops-critical)</SelectItem>
+                                <SelectItem value="email">Email (soc-team@atlas.com)</SelectItem>
+                                <SelectItem value="pagerduty">PagerDuty (Primary Escalation)</SelectItem>
+                            </SelectContent>
+                        </Select>
+                    </div>
+                    <Switch defaultChecked />
+                </div>
+                 <div className="flex items-center justify-between p-4 bg-muted rounded-lg">
+                    <div>
+                        <h5 className="font-semibold">Warning Alerts Route</h5>
+                        <Select defaultValue="email">
+                            <SelectTrigger className="w-[280px] mt-2">
+                                <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="slack">Slack Channel (#secops-warnings)</SelectItem>
+                                <SelectItem value="email">Email (soc-team@atlas.com)</SelectItem>
+                            </SelectContent>
+                        </Select>
+                    </div>
+                    <Switch defaultChecked />
+                </div>
+                <div className="flex items-center justify-between p-4 bg-muted rounded-lg">
+                     <h5 className="font-semibold">PagerDuty Integration</h5>
+                     <Button variant="outline" className="border-blue-500/50 text-blue-400 hover:bg-blue-500/10 hover:text-blue-300">Configure PagerDuty API</Button>
                 </div>
               </div>
             </CardContent>
@@ -300,11 +312,11 @@ export default function SettingsPage() {
                 </CardHeader>
                 <CardContent className="space-y-8">
                      <div className="space-y-4">
-                        <Label>Soft Rate Limit Threshold ({softLimit[0]} Calls/min) for {selectedAppName}</Label>
+                        <Label>Soft Rate Limit Threshold for {selectedAppName} ({softLimit[0]} Calls/min)</Label>
                         <Slider value={softLimit} onValueChange={setSoftLimit} max={selectedApp === 'flipkart' ? 5000 : 1000} min={100} step={10} className="[&>span]:bg-blue-500" />
                     </div>
                      <div className="space-y-4">
-                        <Label>Hard Block Threshold ({hardBlock[0]} Calls/min) for {selectedAppName}</Label>
+                        <Label>Hard Block Threshold for {selectedAppName} ({hardBlock[0]} Calls/min)</Label>
                         <Slider value={hardBlock} onValueChange={setHardBlock} max={selectedApp === 'flipkart' ? 10000 : 5000} min={selectedApp === 'genai' ? 50: 500} step={50} className="[&>span]:bg-red-500" />
                     </div>
                     <div className="space-y-4">
@@ -360,32 +372,57 @@ export default function SettingsPage() {
         );
       case 'ml-baselines':
         return (
-            <Card>
-                <CardHeader>
-                    <CardTitle>Machine Learning Configuration</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-6">
-                    <div className="bg-blue-900/30 border border-blue-500/30 text-blue-300 text-sm rounded-lg p-4 flex items-center gap-3">
-                        <BrainCircuit className="h-5 w-5"/>
-                        <span>ML Engine Status: Active. Learning from past 30 days of traffic.</span>
-                    </div>
-                    <div className="space-y-2">
-                        <Label htmlFor="training-window">Training Period Window (Days)</Label>
-                        <Input id="training-window" type="number" value={trainingWindow} onChange={e => setTrainingWindow(Number(e.target.value))} />
-                    </div>
-                    <div className="space-y-2">
-                        <Label htmlFor="model-sensitivity">Model Sensitivity Strategy</Label>
-                        <Select value={modelSensitivity} onValueChange={setModelSensitivity}>
-                            <SelectTrigger id="model-sensitivity"><SelectValue /></SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value="conservative">Conservative (Fewer False Positives)</SelectItem>
-                                <SelectItem value="balanced">Balanced</SelectItem>
-                                <SelectItem value="aggressive">Aggressive (Catch All Anomalies)</SelectItem>
-                            </SelectContent>
-                        </Select>
-                    </div>
-                </CardContent>
-            </Card>
+            <>
+                <Card>
+                    <CardHeader>
+                        <CardTitle>Active Baseline Model: {selectedAppName}</CardTitle>
+                        <CardDescription>Model trained on last {trainingWindow} days of traffic. Last updated: Today, 08:00 AM.</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                        <Button className="bg-blue-600 hover:bg-blue-700">
+                            <BrainCircuit className="mr-2 h-4 w-4" />
+                            Force Retrain Model
+                        </Button>
+                    </CardContent>
+                </Card>
+                <Card>
+                    <CardHeader>
+                        <CardTitle>Machine Learning Configuration</CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-6">
+                        <div className="space-y-2">
+                            <Label htmlFor="training-window">Training Data Window (Days)</Label>
+                            <Input id="training-window" type="number" value={trainingWindow} onChange={e => setTrainingWindow(Number(e.target.value))} />
+                        </div>
+                        <div className="space-y-4">
+                            <div className="flex justify-between text-sm text-muted-foreground">
+                                <Label>Model Sensitivity</Label>
+                                <span>{modelSensitivity.charAt(0).toUpperCase() + modelSensitivity.slice(1)}</span>
+                            </div>
+                             <Slider 
+                                defaultValue={[50]} 
+                                onValueChange={(value) => {
+                                    if (value[0] < 33) setModelSensitivity('conservative');
+                                    else if (value[0] < 66) setModelSensitivity('balanced');
+                                    else setModelSensitivity('aggressive');
+                                }}
+                                max={100} 
+                                step={1} 
+                                className="[&>span]:bg-purple-500" 
+                            />
+                            <div className="flex justify-between text-xs text-muted-foreground">
+                                <span>Conservative</span>
+                                <span>Balanced</span>
+                                <span>Aggressive</span>
+                            </div>
+                        </div>
+                        <div className="flex items-center justify-between p-4 border border-slate-800 rounded-lg">
+                            <Label htmlFor="auto-update-baselines" className="font-medium">Auto-Update Baselines Weekly</Label>
+                            <Switch id="auto-update-baselines" defaultChecked={true} />
+                        </div>
+                    </CardContent>
+                </Card>
+            </>
         );
       case 'user-access':
         return <UserAccessTab />;
@@ -394,7 +431,7 @@ export default function SettingsPage() {
     }
   };
 
-  const showAppContext = activeTab === 'alert-tuning' || activeTab === 'containment';
+  const showAppContext = activeTab === 'alert-tuning' || activeTab === 'containment' || activeTab === 'ml-baselines';
 
   return (
     <div className="space-y-8">

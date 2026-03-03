@@ -1,158 +1,190 @@
 'use client';
 
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
-import Link from 'next/link';
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import * as z from 'zod';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
-import { AuthCard } from '@/components/auth/auth-card';
-import { LoaderCircle } from 'lucide-react';
-import { useAuth } from '@/context/AuthContext';
-import { useToast } from '@/hooks/use-toast';
+import { useState } => (
+  <Card className="flex flex-col justify-between">
+            <CardHeader>
+                <CardTitle className="text-base font-medium">{title}</CardTitle>
+            </CardHeader>
+            <CardContent>
+                <div className={cn("text-2xl font-bold", dataClassName)}>{data}</div>
+                {actionText && (
+                    <Button variant={actionVariant} size="sm" className="mt-4 w-full">
+                        {ActionIcon && <ActionIcon className="mr-2 h-4 w-4" />}
+                        {actionText}
+                    </Button>
+                )}
+            </CardContent>
+        </Card>
+    )
+}
 
-const signupSchema = z.object({
-  fullName: z.string().min(1, { message: 'Full name is required.' }),
-  email: z.string().email({ message: 'Please enter a valid work email.' }),
-  companyName: z.string().min(1, { message: 'Company name is required.' }),
-  password: z.string().min(8, { message: 'Password must be at least 8 characters.' }),
-  confirmPassword: z.string(),
-}).refine(data => data.password === data.confirmPassword, {
-  message: "Passwords don't match",
-  path: ['confirmPassword'],
-});
+const MostVulnerableEndpointsChart = () => (
+    <Card>
+        <CardHeader>
+            <CardTitle>Most Vulnerable Endpoints</CardTitle>
+            <CardDescription>Endpoints with the highest count of critical vulnerabilities (CVEs).</CardDescription>
+        </CardHeader>
+        <CardContent>
+            <ChartContainer config={{}} className="h-80 w-full">
+                 <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={mostVulnerableData} layout="vertical" margin={{ left: 100, top: 10, right: 10 }}>
+                        <CartesianGrid horizontal={false} strokeDasharray="3 3" stroke="hsl(var(--border) / 0.5)" />
+                        <XAxis type="number" tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 12 }} tickLine={false} axisLine={false} />
+                        <YAxis type="category" dataKey="endpoint" tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 12 }} tickLine={false} axisLine={false} width={100} />
+                        <RechartsTooltip content={<ChartTooltipContent />} cursor={{ fill: 'hsl(var(--accent))' }} />
+                        <Bar dataKey="cves" layout="vertical" radius={[0, 4, 4, 0]}>
+                            {mostVulnerableData.map((entry, index) => (
+                                <Cell key={`cell-${index}`} fill={
+                                    index === 0 ? 'hsl(var(--destructive))' :
+                                    index < 3 ? 'hsl(var(--chart-2))' : 'hsl(var(--chart-4))'
+                                } />
+                            ))}
+                        </Bar>
+                    </BarChart>
+                </ResponsiveContainer>
+            </ChartContainer>
+        </CardContent>
+    </Card>
+);
 
-type SignupFormValues = z.infer<typeof signupSchema>;
+const TopViolatorsChart = () => (
+    <Card>
+        <CardHeader>
+            <CardTitle>Top Endpoint Policy Violators</CardTitle>
+            <CardDescription>Users with the most security policy violations.</CardDescription>
+        </CardHeader>
+        <CardContent>
+            <ChartContainer config={{}} className="h-80 w-full">
+                 <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={topViolatorsData} margin={{ left: -20, top: 10, right: 10 }}>
+                        <CartesianGrid vertical={false} strokeDasharray="3 3" stroke="hsl(var(--border) / 0.5)" />
+                        <XAxis dataKey="user" tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 12 }} tickLine={false} axisLine={false} />
+                        <YAxis tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 12 }} tickLine={false} axisLine={false} />
+                        <RechartsTooltip content={<ChartTooltipContent indicator="dot" />} cursor={{ fill: 'hsl(var(--accent))' }}/>
+                        <Bar dataKey="violations" fill="hsl(var(--primary))" radius={4} />
+                    </BarChart>
+                </ResponsiveContainer>
+            </ChartContainer>
+        </CardContent>
+    </Card>
+);
 
-export default function SignupPage() {
-  const router = useRouter();
-  const { signup } = useAuth();
-  const { toast } = useToast();
-  const [isLoading, setIsLoading] = useState(false);
-
-  const form = useForm<SignupFormValues>({
-    resolver: zodResolver(signupSchema),
-    defaultValues: {
-      fullName: '',
-      email: '',
-      companyName: '',
-      password: '',
-      confirmPassword: '',
-    },
-  });
-
-  const onSubmit = async (data: SignupFormValues) => {
-    setIsLoading(true);
-    try {
-      await signup({
-        email: data.email,
-        full_name: data.fullName,
-        password: data.password,
-      });
-      toast({
-        title: "Account Created",
-        description: "Welcome to ATLAS SOC Dashboard",
-      });
-      router.push('/overview');
-    } catch (error: any) {
-      console.error("Signup failed:", error);
-      toast({
-        variant: "destructive",
-        title: "Signup Failed",
-        description: error.message || "Failed to create account. Please try again.",
-      });
-    } finally {
-      setIsLoading(false);
+export default function EndpointSecurityPage() {
+    
+    const getMitigationControls = (threatType: string) => {
+        switch (threatType) {
+            case 'malware':
+                return (
+                    <div className="flex gap-2 justify-end">
+                        <Button variant="outline" size="sm" className="border-orange-500/50 text-orange-400 hover:bg-orange-500/10 hover:text-orange-300">
+                            <Bug className="mr-2" /> Kill Process
+                        </Button>
+                        <Button variant="destructive" size="sm" className="bg-red-600 hover:bg-red-700">
+                            <Server className="mr-2" /> Quarantine Device
+                        </Button>
+                    </div>
+                );
+            case 'usb':
+                return (
+                    <Button variant="outline" size="sm" className="border-yellow-500/50 text-yellow-400 hover:bg-yellow-500/10 hover:text-yellow-300">
+                        <Unplug className="mr-2" /> Lock USB Ports
+                    </Button>
+                );
+            case 'tampering':
+                return (
+                    <Button variant="outline" size="sm" className="border-blue-500/50 text-blue-400 hover:bg-blue-500/10 hover:text-blue-300">
+                        <Power className="mr-2" /> Force Enable Defender
+                    </Button>
+                );
+            case 'network':
+                 return (
+                    <div className="flex gap-2 justify-end">
+                        <Button variant="outline" size="sm" className="border-orange-500/50 text-orange-400 hover:bg-orange-500/10 hover:text-orange-300">
+                            <Ban className="mr-2" /> Drop Connection
+                        </Button>
+                        <Button variant="destructive" size="sm" className="bg-red-600 hover:bg-red-700">
+                            <UserX className="mr-2" /> Lock User Account
+                        </Button>
+                    </div>
+                );
+            default:
+                return <Button variant="secondary" size="sm" disabled>No action available</Button>;
+        }
     }
-  };
 
-  return (
-    <AuthCard
-      title="Request Access"
-      description="Fill out the form to request an account"
-    >
-      <Form {...form}>
-        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-          <FormField
-            control={form.control}
-            name="fullName"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Full Name</FormLabel>
-                <FormControl>
-                  <Input placeholder="Jane Doe" {...field} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-          <FormField
-            control={form.control}
-            name="email"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Work Email</FormLabel>
-                <FormControl>
-                  <Input placeholder="name@company.com" {...field} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-           <FormField
-            control={form.control}
-            name="companyName"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Company Name</FormLabel>
-                <FormControl>
-                  <Input placeholder="ATLAS Corporation" {...field} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-          <FormField
-            control={form.control}
-            name="password"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Password</FormLabel>
-                <FormControl>
-                  <Input type="password" placeholder="********" {...field} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-          <FormField
-            control={form.control}
-            name="confirmPassword"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Confirm Password</FormLabel>
-                <FormControl>
-                  <Input type="password" placeholder="********" {...field} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-          <Button type="submit" className="w-full bg-blue-600 hover:bg-blue-700" disabled={isLoading}>
-            {isLoading && <LoaderCircle className="mr-2 h-4 w-4 animate-spin" />}
-            Create Account
-          </Button>
-        </form>
-      </Form>
-       <p className="mt-6 text-center text-sm text-muted-foreground">
-        Already have an account?{' '}
-        <Link href="/login" className="font-semibold text-primary hover:underline">
-            Sign In
-        </Link>
-      </p>
-    </AuthCard>
-  );
+
+    return (
+        <div className="space-y-8">
+            <h1 className="text-3xl font-bold">Endpoint Security</h1>
+
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                <KpiCard
+                    title="Active Malware Infections"
+                    data={`${kpiData.malwareInfections} Devices Compromised`}
+                    actionText="Isolate Devices"
+                    actionIcon={Server}
+                    dataClassName='text-red-400'
+                />
+                <KpiCard
+                    title="Critical Policy Violations (AV Disabled)"
+                    data={<div className="font-mono text-base">{kpiData.policyViolations.join(', ')}</div>}
+                    actionText="Force Enable AV"
+                    actionIcon={Power}
+                    actionVariant="outline"
+                     dataClassName='text-orange-400'
+                />
+                 <KpiCard
+                    title="Users with High Anomaly Scores"
+                    data={<div className="font-mono text-base">{kpiData.highRiskUsers.join(', ')}</div>}
+                    dataClassName='text-yellow-400'
+                />
+            </div>
+
+            <div className="grid gap-4 md:grid-cols-2">
+                <MostVulnerableEndpointsChart />
+                <TopViolatorsChart />
+            </div>
+
+            <Card>
+                <CardHeader>
+                    <CardTitle>Endpoint Event Log & Mitigation</CardTitle>
+                    <CardDescription>Live feed of endpoint threats with context-aware response actions.</CardDescription>
+                </CardHeader>
+                <CardContent>
+                    <Table>
+                        <TableHeader>
+                            <TableRow>
+                                <TableHead className="w-[180px]">Timestamp</TableHead>
+                                <TableHead>Endpoint & User</TableHead>
+                                <TableHead>Threat Description</TableHead>
+                                <TableHead className="text-right">Context-Aware Mitigation</TableHead>
+                            </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                            {endpointEventsData.map((event) => (
+                                <TableRow key={event.id}>
+                                    <TableCell className="text-xs text-muted-foreground">{event.timestamp}</TableCell>
+                                    <TableCell>
+                                        <div className="font-mono text-white">{event.endpoint}</div>
+                                        <div className="text-xs text-muted-foreground">{event.user}</div>
+                                    </TableCell>
+                                    <TableCell>
+                                        <Badge variant="destructive">{event.threat}</Badge>
+                                    </TableCell>
+                                    <TableCell className="text-right">
+                                        {getMitigationControls(event.type)}
+                                    </TableCell>
+                                </TableRow>
+                            ))}
+                             {endpointEventsData.length === 0 && (
+                                <TableRow>
+                                    <TableCell colSpan={4} className="text-center text-muted-foreground">No endpoint events to display.</TableCell>
+                                </TableRow>
+                            )}
+                        </TableBody>
+                    </Table>
+                </CardContent>
+            </Card>
+        </div>
+    );
 }

@@ -31,7 +31,7 @@ const dataExfiltrationData = [
 
 const suspiciousSourcesData = [
   { source: 'LAPTOP-DEV-09', queries: 25 },
-  { source: 'External IP: 185.220...', queries: 48 },
+  { source: 'External IP (Public): 185.220.101.45', queries: 48 },
   { source: 'unknown_service', queries: 112 },
 ];
 
@@ -100,10 +100,10 @@ const SuspiciousQuerySourcesChart = () => (
         <CardContent>
             <ChartContainer config={{}} className="h-80 w-full">
                 <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={suspiciousSourcesData} layout="vertical" margin={{ left: 120, top: 10, right: 10 }}>
+                    <BarChart data={suspiciousSourcesData} layout="vertical" margin={{ left: 200, top: 10, right: 10 }}>
                         <CartesianGrid horizontal={false} strokeDasharray="3 3" stroke="hsl(var(--border) / 0.5)" />
                         <XAxis type="number" tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 12 }} tickLine={false} axisLine={false} />
-                        <YAxis type="category" dataKey="source" tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 12 }} tickLine={false} axisLine={false} width={120} />
+                        <YAxis type="category" dataKey="source" tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 12 }} tickLine={false} axisLine={false} width={200} />
                         <RechartsTooltip content={<ChartTooltipContent />} cursor={{ fill: 'hsl(var(--accent))' }} />
                         <Bar dataKey="queries" layout="vertical" fill="hsl(var(--chart-2))" radius={[0, 4, 4, 0]} />
                     </BarChart>

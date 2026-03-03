@@ -18,12 +18,13 @@ export async function GET(request: Request) {
       cache: 'no-store',
     });
 
-    const data = await response.json();
-    
     if (!response.ok) {
-      return NextResponse.json({ error: data.detail || 'Backend error' }, { status: response.status });
+        const errorText = await response.text();
+        const error = JSON.parse(errorText || '{}');
+        return NextResponse.json({ error: error.detail || 'Backend error' }, { status: response.status });
     }
-
+    
+    const data = await response.json();
     return NextResponse.json(data);
   } catch (error) {
     console.error('API proxy error for /api/reports/scheduled:', error);

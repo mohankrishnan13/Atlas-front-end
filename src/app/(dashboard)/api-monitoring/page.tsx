@@ -118,9 +118,7 @@ const TopConsumersTable = () => (
                             <TableCell>{row.calls}</TableCell>
                             <TableCell className={cn(row.isOver && "text-red-400 font-bold")}>${row.cost.toFixed(2)}</TableCell>
                             <TableCell className="text-right">
-                                {row.isOver ? 
-                                <Button variant="outline" className="border-orange-500/50 text-orange-400 hover:bg-orange-500/10 hover:text-orange-300"><Zap />Throttle Limits</Button>
-                                : <Button variant="outline" className="border-red-500/50 text-red-400 hover:bg-red-500/10 hover:text-red-300"><KeySquare />Revoke Key</Button>}
+                                <Button variant="outline" className="border-red-500/50 text-red-400 hover:bg-red-500/10 hover:text-red-300"><KeySquare />Revoke Key</Button>
                             </TableCell>
                         </TableRow>
                     ))}
